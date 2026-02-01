@@ -1,0 +1,193 @@
+license_key: DEMO-PRO-2026
+
+# Jarvis Mark III Configuration
+
+# Speech-to-Text Settings
+stt:
+  mode: "local"  # "local" or "api"
+  # Local mode uses faster-whisper (offline, private)
+  # API mode uses OpenAI Whisper (requires API key, faster)
+  
+  local:
+    model: "base"  # tiny, base, small, medium, large-v3
+    device: "cpu"  # cpu or cuda
+    compute_type: "int8"  # int8, float16, float32
+  
+  api:
+    api_key: ""  # Set your OpenAI API key here
+  
+  activation:
+    mode: "wake_word"  # Always listening in open mic mode
+    wake_word: "jarvis"
+    key: "space"  # Ignored in open mic mode
+    interrupt_key: "ctrl"  # Press Ctrl to interrupt Jarvis while speaking
+  
+  audio:
+    sample_rate: 16000
+    channels: 1
+    duration: 5  # Max recording duration in seconds
+
+# AI Brain Settings
+llm:
+  # Enable/Disable AI Brain
+  # true  = Uses Ollama/OpenAI for intelligent responses (requires setup)
+  # false = Uses only Q&A database + Custom Commands (no AI needed, faster)
+  enabled: true
+  
+  provider: "ollama"  # "ollama" or "openai"
+  model: "llama3.2:3b"  # llama3.2:3b, mistral, llama3.1:8b
+  host: "http://localhost:11434"
+  
+  generation:
+    temperature: 0.7
+    max_tokens: 500
+    stream: false
+  
+  system_prompt: |
+    You are Jarvis, an intelligent AI assistant. You are calm, professional, and helpful.
+    Respond concisely and naturally. Keep responses brief and conversational.
+    Do not mention the date or time unless explicitly asked.
+    
+    For commands, respond in this format:
+    INTENT: <command_type>
+    ACTION: <specific_action>
+    PARAMS: <parameters>
+    
+    For conversations, respond naturally.
+
+# Text-to-Speech Settings
+tts:
+  engine: "pyttsx3"  # Local TTS
+  
+  voice:
+    rate: 175  # Words per minute (150-200 normal)
+    volume: 0.9  # 0.0 to 1.0
+    voice_index: 0  # 0 for default, try others for different voices
+  
+  style: "professional"  # professional, casual, formal
+
+# Skills Settings
+skills:
+  enabled:
+    - custom_qa  # User Q&A database (HIGHEST PRIORITY - checked first)
+    - system
+    - web
+    - file
+    - python
+    - smarthome  # Home Assistant integration for smart home control
+    - custom  # User-defined custom commands
+  
+  custom_qa:
+    # No additional config needed - loads from custom_qa.yaml
+  
+  system:
+    require_confirmation: true  # Ask before dangerous operations
+    allowed_operations:
+      - volume
+      - open_app
+      - screenshot
+      # - shutdown  # Uncomment to enable
+      # - restart
+  
+  python:
+    sandboxed: true
+    timeout: 30  # seconds
+    max_memory: 512  # MB
+
+# Memory Settings
+memory:
+  enabled: true
+  database: "data/jarvis_memory.db"
+  
+  retention:
+    conversations: 1000  # Keep last N conversations
+    preferences: true  # Always keep preferences
+  
+  context_window: 5  # Number of recent exchanges to include
+
+# UI Settings
+ui:
+  theme: "dark"  # dark or light
+  window:
+    width: 400
+    height: 600
+    always_on_top: false
+  
+  indicators:
+    listening: "🎤"
+    thinking: "🧠"
+    speaking: "🔊"
+    idle: "💤"
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/jarvis.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# Safety Settings
+safety:
+  command_confirmation: true
+  dangerous_commands_blocked: true
+  rate_limit:
+    enabled: true
+    max_requests_per_minute: 60
+# ============================================
+# Enhanced Features Configuration
+# ============================================
+
+# Voice Activity Detection (VAD)
+vad:
+  enabled: false  # Set to true for hands-free operation
+  method: "energy"  # "energy" (simple, fast) or "silero" (accurate, requires PyTorch)
+  sensitivity: 0.5  # 0.0 (less sensitive) to 1.0 (more sensitive)
+
+# API Integrations
+integrations:
+  # Weather API (OpenWeatherMap)
+  openweather_api_key: ""  # Get free key: https://openweathermap.org/api
+  
+  # News API
+  news_api_key: ""  # Get free key: https://newsapi.org
+  
+  # Email Configuration
+  email:
+    address: ""  # your_email@gmail.com
+    password: ""  # Use app-specific password for Gmail
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    imap_server: "imap.gmail.com"
+    imap_port: 993
+  
+  # Spotify Integration
+  spotify_enabled: false
+  spotify_client_id: ""  # Get from: https://developer.spotify.com/dashboard
+  spotify_client_secret: ""
+  
+  # Home Assistant (Smart Home)
+  home_assistant:
+    enabled: false
+    url: "http://homeassistant.local:8123"
+    token: ""  # Long-lived access token from HA
+  
+  # AI Vision
+  vision:
+    enabled: false
+    camera_index: 0  # 0 for default webcam
+    # Note: Requires 'ollama pull llava' for vision capabilities
+
+# REST API Server (for mobile app control)
+api:
+  enabled: false
+  host: "0.0.0.0"  # 0.0.0.0 to allow external connections
+  port: 5000
+  api_key: ""  # Set a secure API key for authentication (optional but recommended)
+  # Access API at: http://your-ip:5000/api/...
+  # Example: curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:5000/api/status
+
+# Multi-language Support
+languages:
+  primary: "en"  # Primary language for Whisper STT
+  # Whisper supports: en, es, fr, de, it, pt, ru, ja, ko, zh, and many more
+  # Change STT language in stt section above

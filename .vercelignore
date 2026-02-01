@@ -1,0 +1,78 @@
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Build outputs
+build/
+dist/
+*.spec
+
+# Data
+data/
+
+# Installer
+installer/
+
+# Core Python files (not needed for website)
+core/
+skills/
+ui/
+scripts/
+main.py
+quickstart.py
+build.py
+test_*.py
+verify_installation.py
+prepare_release.py
+
+# Documentation
+CHANGELOG.md
+CUSTOM_COMMANDS*.md
+DEVELOPMENT.md
+DISTRIBUTION_GUIDE.md
+ENHANCED_FEATURES_GUIDE.md
+EXAMPLES.md
+GITHUB_RELEASE_GUIDE.md
+INSTALLATION.md
+INTERRUPT_FEATURE.md
+MONETIZATION_COMPLETE.md
+NEW_FEATURES.md
+NEXT_STEPS.md
+PROJECT_COMPLETE.md
+QA_*.md
+QUICKREF.md
+READY.md
+RELEASE_CHECKLIST.md
+SETUP.md
+STRUCTURE.md
+UI_AND_BUILD.md
+UPGRADE_COMPLETE.md
+USER_GUIDE.md
+VERCEL_*.md
+WEBSITE_DEPLOY_QUICKSTART.md
+README_PROFESSIONAL.md
+
+# Config files
+config.yaml
+custom_commands.yaml
+custom_qa.yaml
+
+# Misc
+.vercel-deploy/
+website/
+deploy-vercel.*
+VERSION
+requirements.txt

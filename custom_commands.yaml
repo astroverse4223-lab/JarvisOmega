@@ -1,0 +1,1002 @@
+# Custom Commands Configuration
+# Add your own voice commands here!
+#
+# Format:
+# - name: "Command name"
+#   trigger: "phrase to say"
+#   action: "powershell"  # or "python" or "executable"
+#   command: "your command here"
+#   description: "What this does"
+#   confirm: false  # Set to true to ask for confirmation
+
+commands:
+  # === JARVIS CONTROL ===
+  
+  - name: "Stop Listening"
+    trigger: "stop listening"
+    action: "stop_listening"
+    command: ""
+    description: "Stop listening and go idle"
+    confirm: false
+  
+  - name: "Go Offline"
+    trigger: "go offline"
+    action: "stop_listening"
+    command: ""
+    description: "Stop listening and go idle"
+    confirm: false
+  
+  - name: "Exit Jarvis"
+    trigger: "exit jarvis"
+    action: "shutdown"
+    command: ""
+    description: "Shutdown Jarvis assistant"
+    confirm: false
+  
+  - name: "Goodbye Jarvis"
+    trigger: "goodbye jarvis"
+    action: "shutdown"
+    command: ""
+    description: "Shutdown Jarvis assistant"
+    confirm: false
+  
+  - name: "Close All Windows"
+    trigger: "close all windows"
+    action: "powershell"
+    command: "Get-Process | Where-Object {$_.MainWindowHandle -ne 0 -and $_.ProcessName -notlike '*jarvis*' -and $_.ProcessName -notlike '*Jarvis*' -and $_.ProcessName -notlike '*python*'} | ForEach-Object { $_.CloseMainWindow() }"
+    description: "Close all open windows except JARVIS"
+    confirm: false
+  
+  # === FOLDERS & FILE EXPLORER ===
+  
+  - name: "Open Downloads"
+    trigger: "open downloads"
+    action: "powershell"
+    command: "explorer.exe $env:USERPROFILE\\Downloads"
+    description: "Opens the Downloads folder"
+    confirm: false
+  
+  - name: "Open Documents"
+    trigger: "open documents"
+    action: "powershell"
+    command: "explorer.exe $env:USERPROFILE\\Documents"
+    description: "Opens the Documents folder"
+    confirm: false
+  
+  - name: "Open Desktop"
+    trigger: "open desktop"
+    action: "powershell"
+    command: "explorer.exe $env:USERPROFILE\\Desktop"
+    description: "Opens the Desktop folder"
+    confirm: false
+  
+  - name: "Open Pictures"
+    trigger: "open pictures"
+    action: "powershell"
+    command: "explorer.exe $env:USERPROFILE\\Pictures"
+    description: "Opens the Pictures folder"
+    confirm: false
+  
+  - name: "Open Music"
+    trigger: "open music"
+    action: "powershell"
+    command: "explorer.exe $env:USERPROFILE\\Music"
+    description: "Opens the Music folder"
+    confirm: false
+  
+  - name: "Open Videos"
+    trigger: "open videos"
+    action: "powershell"
+    command: "explorer.exe $env:USERPROFILE\\Videos"
+    description: "Opens the Videos folder"
+    confirm: false
+  
+  - name: "Open This PC"
+    trigger: "open this pc"
+    action: "powershell"
+    command: "explorer.exe ::{20D04FE0-3AEA-1069-A2D8-08002B30309D}"
+    description: "Opens This PC"
+    confirm: false
+  
+  # === WEBSITES ===
+  
+  - name: "Open GitHub"
+    trigger: "open github"
+    action: "powershell"
+    command: "Start-Process 'https://github.com'"
+    description: "Opens GitHub"
+    confirm: false
+  
+  - name: "Open YouTube"
+    trigger: "open youtube"
+    action: "powershell"
+    command: "Start-Process 'https://youtube.com'"
+    description: "Opens YouTube"
+    confirm: false
+  
+  - name: "Open Gmail"
+    trigger: "open gmail"
+    action: "powershell"
+    command: "Start-Process 'https://gmail.com'"
+    description: "Opens Gmail"
+    confirm: false
+  
+  - name: "Open Google"
+    trigger: "open google"
+    action: "powershell"
+    command: "Start-Process 'https://google.com'"
+    description: "Opens Google"
+    confirm: false
+  
+  - name: "Open Reddit"
+    trigger: "open reddit"
+    action: "powershell"
+    command: "Start-Process 'https://reddit.com'"
+    description: "Opens Reddit"
+    confirm: false
+  
+  - name: "Open Twitter"
+    trigger: "open twitter"
+    action: "powershell"
+    command: "Start-Process 'https://twitter.com'"
+    description: "Opens Twitter"
+    confirm: false
+  
+  - name: "Open Netflix"
+    trigger: "open netflix"
+    action: "powershell"
+    command: "Start-Process 'https://netflix.com'"
+    description: "Opens Netflix"
+    confirm: false
+  
+  - name: "Open ChatGPT"
+    trigger: "open chatgpt"
+    action: "powershell"
+    command: "Start-Process 'https://chat.openai.com'"
+    description: "Opens ChatGPT"
+    confirm: false
+  
+  # === APPLICATIONS ===
+  
+  - name: "Open Notepad"
+    trigger: "open notepad"
+    action: "powershell"
+    command: "notepad.exe"
+    description: "Opens Notepad"
+    confirm: false
+  
+  - name: "Open Calculator"
+    trigger: "open calculator"
+    action: "powershell"
+    command: "calc.exe"
+    description: "Opens Calculator"
+    confirm: false
+  
+  - name: "Open Paint"
+    trigger: "open paint"
+    action: "powershell"
+    command: "mspaint.exe"
+    description: "Opens Paint"
+    confirm: false
+  
+  - name: "Open Task Manager"
+    trigger: "open task manager"
+    action: "powershell"
+    command: "taskmgr.exe"
+    description: "Opens Task Manager"
+    confirm: false
+  
+  - name: "Open Control Panel"
+    trigger: "open control panel"
+    action: "powershell"
+    command: "control.exe"
+    description: "Opens Control Panel"
+    confirm: false
+  
+  - name: "Open Settings"
+    trigger: "open settings"
+    action: "powershell"
+    command: "start ms-settings:"
+    description: "Opens Windows Settings"
+    confirm: false
+  
+  - name: "Open Command Prompt"
+    trigger: "open command prompt"
+    action: "powershell"
+    command: "cmd.exe"
+    description: "Opens Command Prompt"
+    confirm: false
+  
+  - name: "Open PowerShell"
+    trigger: "open powershell"
+    action: "powershell"
+    command: "powershell.exe"
+    description: "Opens PowerShell"
+    confirm: false
+  
+  - name: "Open VS Code"
+    trigger: "open vs code"
+    action: "powershell"
+    command: "code"
+    description: "Opens VS Code"
+    confirm: false
+  
+  - name: "Open Snipping Tool"
+    trigger: "open snipping tool"
+    action: "powershell"
+    command: "snippingtool.exe"
+    description: "Opens Snipping Tool"
+    confirm: false
+  
+  # === VOLUME CONTROL ===
+  
+  - name: "Volume Up"
+    trigger: "volume up"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]175)"
+    description: "Increases volume"
+    confirm: false
+  
+  - name: "Volume Down"
+    trigger: "volume down"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]174)"
+    description: "Decreases volume"
+    confirm: false
+  
+  - name: "Mute"
+    trigger: "mute volume"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]173)"
+    description: "Mutes/unmutes volume"
+    confirm: false
+  
+  # === SYSTEM CONTROLS ===
+  
+  - name: "Lock Computer"
+    trigger: "lock my computer"
+    action: "powershell"
+    command: "rundll32.exe user32.dll,LockWorkStation"
+    description: "Locks the computer"
+    confirm: false
+  
+  - name: "Sleep Computer"
+    trigger: "sleep my computer"
+    action: "powershell"
+    command: "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
+    description: "Puts computer to sleep"
+    confirm: true
+  
+  - name: "Restart Computer"
+    trigger: "restart my computer"
+    action: "powershell"
+    command: "Restart-Computer -Force"
+    description: "Restarts the computer"
+    confirm: true
+  
+  - name: "Shutdown Computer"
+    trigger: "shutdown my computer"
+    action: "powershell"
+    command: "Stop-Computer -Force"
+    description: "Shuts down the computer"
+    confirm: true
+  
+  - name: "Sign Out"
+    trigger: "sign out"
+    action: "powershell"
+    command: "logoff"
+    description: "Signs out current user"
+    confirm: true
+  
+  # === SYSTEM CLEANUP ===
+  
+  - name: "Empty Recycle Bin"
+    trigger: "empty recycle bin"
+    action: "powershell"
+    command: "Clear-RecycleBin -Force"
+    description: "Empties the recycle bin"
+    confirm: true
+  
+  - name: "Clear Temp Files"
+    trigger: "clear temp files"
+    action: "powershell"
+    command: "Remove-Item $env:TEMP\\* -Recurse -Force -ErrorAction SilentlyContinue"
+    description: "Clears temporary files"
+    confirm: true
+  
+  # === SCREENSHOTS ===
+  
+  - name: "Take Screenshot"
+    trigger: "take screenshot"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('{PRTSC}')"
+    description: "Takes a screenshot"
+    confirm: false
+  
+  - name: "Snip Screen"
+    trigger: "snip screen"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^+s')"
+    description: "Opens snip & sketch"
+    confirm: false
+  
+  # === WINDOW MANAGEMENT ===
+  
+  - name: "Minimize All Windows"
+    trigger: "minimize all windows"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject Shell.Application; $obj.MinimizeAll()"
+    description: "Minimizes all windows"
+    confirm: false
+  
+  - name: "Close Current Window"
+    trigger: "close window"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('%{F4}')"
+    description: "Closes current window"
+    confirm: false
+  
+  - name: "Close Browser"
+    trigger: "close browser"
+    action: "powershell"
+    command: "Get-Process | Where-Object {$_.ProcessName -match 'chrome|firefox|msedge|iexplore|brave|opera'} | Stop-Process -Force"
+    description: "Closes all browser windows"
+    confirm: false
+  
+  # === MEDIA CONTROLS ===
+  
+  - name: "Play Pause"
+    trigger: "play pause"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]179)"
+    description: "Play/Pause media"
+    confirm: false
+  
+  - name: "Next Track"
+    trigger: "next track"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]176)"
+    description: "Next track"
+    confirm: false
+  
+  - name: "Previous Track"
+    trigger: "previous track"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]177)"
+    description: "Previous track"
+    confirm: false
+  
+  # === SYSTEM INFO ===
+  
+  - name: "Show IP Address"
+    trigger: "show my ip"
+    action: "powershell"
+    command: "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.InterfaceAlias -notlike '*Loopback*'}).IPAddress | Out-String | Write-Host"
+    description: "Shows IP address"
+    confirm: false
+  
+  - name: "Show WiFi Password"
+    trigger: "show wifi password"
+    action: "powershell"
+    command: "netsh wlan show profile name=(netsh wlan show interfaces | Select-String 'SSID' | ForEach-Object {$_ -replace '.*: ',''}) key=clear | Select-String 'Key Content'"
+    description: "Shows current WiFi password"
+    confirm: false
+  
+  - name: "Check Battery"
+    trigger: "check battery"
+    action: "powershell"
+    command: "(Get-WmiObject -Class Win32_Battery).EstimatedChargeRemaining | ForEach-Object {Write-Host \"Battery: $_% remaining\"}"
+    description: "Shows battery percentage"
+    confirm: false
+  
+  # === QUICK ACTIONS ===
+  
+  - name: "Open Run Dialog"
+    trigger: "open run"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^{ESC}'); Start-Sleep -Milliseconds 100; $obj.SendKeys('r')"
+    description: "Opens Run dialog"
+    confirm: false
+  
+  - name: "Open Search"
+    trigger: "open search"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^{ESC}')"
+    description: "Opens Windows Search"
+    confirm: false
+  
+  - name: "Refresh Desktop"
+    trigger: "refresh desktop"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('{F5}')"
+    description: "Refreshes desktop"
+    confirm: false
+
+  # === NETWORK & INTERNET ===
+  
+  - name: "Disconnect WiFi"
+    trigger: "disconnect wifi"
+    action: "powershell"
+    command: "netsh wlan disconnect"
+    description: "Disconnects from WiFi"
+    confirm: false
+  
+  - name: "Connect WiFi"
+    trigger: "connect wifi"
+    action: "powershell"
+    command: "netsh wlan connect"
+    description: "Connects to WiFi"
+    confirm: false
+  
+  # === PYTHON SCRIPTS ===
+  
+  - name: "System Information"
+    trigger: "show system info"
+    action: "python"
+    command: "scripts/system_info.py"
+    description: "Display detailed system information"
+    confirm: false
+  
+  - name: "Organize Downloads"
+    trigger: "organize downloads"
+    action: "python"
+    command: "scripts/organize_downloads.py"
+    description: "Sort downloads folder by file type"
+    confirm: false
+  
+  - name: "Generate Password"
+    trigger: "generate password"
+    action: "python"
+    command: "scripts/password_generator.py"
+    description: "Generate secure random password"
+    confirm: false
+  
+  - name: "Quick Note"
+    trigger: "take note"
+    action: "python"
+    command: "scripts/quick_note.py list"
+    description: "Quick note taker with timestamp"
+    confirm: false
+  
+  - name: "Clipboard History"
+    trigger: "clipboard history"
+    action: "python"
+    command: "scripts/clipboard_manager.py history"
+    description: "View clipboard history"
+    confirm: false
+  
+  - name: "Network Scanner"
+    trigger: "scan network"
+    action: "python"
+    command: "scripts/network_scanner.py"
+    description: "Display network information"
+    confirm: false
+  
+  - name: "Take Screenshot"
+    trigger: "take screenshot"
+    action: "python"
+    command: "scripts/screenshot_tool.py"
+    description: "Capture and save screenshot"
+    confirm: false
+  
+  - name: "Find Recent Files"
+    trigger: "find recent files"
+    action: "python"
+    command: "scripts/file_finder.py"
+    description: "Show recently modified files"
+    confirm: false
+  
+  - name: "Run Calculator"
+    trigger: "run calculator"
+    action: "python"
+    command: "scripts/calculator.py"
+    description: "Show calculator examples"
+    confirm: false
+  
+  - name: "Organize Desktop"
+    trigger: "organize desktop"
+    action: "python"
+    command: "scripts/desktop_organizer.py"
+    description: "Clean and organize desktop files"
+    confirm: false
+  
+  - name: "Show Top Processes"
+    trigger: "show top processes"
+    action: "python"
+    command: "scripts/process_manager.py"
+    description: "Display top running processes"
+    confirm: false
+  
+  - name: "Set Timer"
+    trigger: "set timer"
+    action: "python"
+    command: "scripts/timer.py"
+    description: "Start a 5-minute countdown timer"
+    confirm: false
+  
+  - name: "Enable Airplane Mode"
+    trigger: "enable airplane mode"
+    action: "powershell"
+    command: "Get-PnpDevice | Where-Object {$_.FriendlyName -like '*Wireless*' -or $_.FriendlyName -like '*WiFi*'} | Disable-PnpDevice -Confirm:$false"
+    description: "Enables airplane mode"
+    confirm: false
+  
+  - name: "Disable Airplane Mode"
+    trigger: "disable airplane mode"
+    action: "powershell"
+    command: "Get-PnpDevice | Where-Object {$_.FriendlyName -like '*Wireless*' -or $_.FriendlyName -like '*WiFi*'} | Enable-PnpDevice -Confirm:$false"
+    description: "Disables airplane mode"
+    confirm: false
+  
+  - name: "Show WiFi Networks"
+    trigger: "show wifi networks"
+    action: "powershell"
+    command: "netsh wlan show networks"
+    description: "Shows available WiFi networks"
+    confirm: false
+  
+  - name: "Check Internet Speed"
+    trigger: "check internet speed"
+    action: "powershell"
+    command: "Start-Process 'https://fast.com'"
+    description: "Opens fast.com for speed test"
+    confirm: false
+  
+  - name: "Flush DNS"
+    trigger: "flush dns"
+    action: "powershell"
+    command: "ipconfig /flushdns"
+    description: "Clears DNS cache"
+    confirm: false
+  
+  - name: "Renew IP Address"
+    trigger: "renew ip address"
+    action: "powershell"
+    command: "ipconfig /release; ipconfig /renew"
+    description: "Renews IP address"
+    confirm: false
+  
+  # === FILE OPERATIONS ===
+  
+  - name: "Create New Folder"
+    trigger: "create new folder"
+    action: "powershell"
+    command: "New-Item -Path \"$env:USERPROFILE\\Desktop\\NewFolder_$(Get-Date -Format 'yyyyMMdd_HHmmss')\" -ItemType Directory"
+    description: "Creates new folder on desktop"
+    confirm: false
+  
+  - name: "Create Text File"
+    trigger: "create text file"
+    action: "powershell"
+    command: "New-Item -Path \"$env:USERPROFILE\\Desktop\\NewFile_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt\" -ItemType File"
+    description: "Creates new text file on desktop"
+    confirm: false
+  
+  - name: "Show Hidden Files"
+    trigger: "show hidden files"
+    action: "powershell"
+    command: "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'Hidden' -Value 1; Stop-Process -Name explorer -Force"
+    description: "Shows hidden files"
+    confirm: false
+  
+  - name: "Hide Hidden Files"
+    trigger: "hide hidden files"
+    action: "powershell"
+    command: "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'Hidden' -Value 2; Stop-Process -Name explorer -Force"
+    description: "Hides hidden files"
+    confirm: false
+  
+  - name: "Show File Extensions"
+    trigger: "show file extensions"
+    action: "powershell"
+    command: "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'HideFileExt' -Value 0; Stop-Process -Name explorer -Force"
+    description: "Shows file extensions"
+    confirm: false
+  
+  - name: "Open Recent Files"
+    trigger: "open recent files"
+    action: "powershell"
+    command: "explorer.exe shell:Recent"
+    description: "Opens recent files"
+    confirm: false
+  
+  # === DISPLAY & APPEARANCE ===
+  
+  - name: "Enable Dark Mode"
+    trigger: "enable dark mode"
+    action: "powershell"
+    command: "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'AppsUseLightTheme' -Value 0"
+    description: "Enables dark mode"
+    confirm: false
+  
+  - name: "Enable Light Mode"
+    trigger: "enable light mode"
+    action: "powershell"
+    command: "Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'AppsUseLightTheme' -Value 1"
+    description: "Enables light mode"
+    confirm: false
+  
+  - name: "Set Brightness 100"
+    trigger: "brightness 100"
+    action: "powershell"
+    command: "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,100)"
+    description: "Sets brightness to 100%"
+    confirm: false
+  
+  - name: "Set Brightness 50"
+    trigger: "brightness 50"
+    action: "powershell"
+    command: "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,50)"
+    description: "Sets brightness to 50%"
+    confirm: false
+  
+  - name: "Set Brightness 25"
+    trigger: "brightness 25"
+    action: "powershell"
+    command: "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,25)"
+    description: "Sets brightness to 25%"
+    confirm: false
+  
+  - name: "Change Wallpaper"
+    trigger: "change wallpaper"
+    action: "powershell"
+    command: "start ms-settings:personalization-background"
+    description: "Opens wallpaper settings"
+    confirm: false
+  
+  - name: "Night Light On"
+    trigger: "enable night light"
+    action: "powershell"
+    command: "start ms-settings:nightlight"
+    description: "Opens night light settings"
+    confirm: false
+  
+  # === PRODUCTIVITY ===
+  
+  - name: "New Browser Tab"
+    trigger: "new tab"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^t')"
+    description: "Opens new browser tab"
+    confirm: false
+  
+  - name: "Close Current Tab"
+    trigger: "close tab"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^w')"
+    description: "Closes current tab"
+    confirm: false
+  
+  - name: "Reopen Closed Tab"
+    trigger: "reopen tab"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^+t')"
+    description: "Reopens last closed tab"
+    confirm: false
+  
+  - name: "Open Incognito"
+    trigger: "open incognito"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^+n')"
+    description: "Opens incognito window"
+    confirm: false
+  
+  - name: "Zoom In"
+    trigger: "zoom in"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^{ADD}')"
+    description: "Zooms in current window"
+    confirm: false
+  
+  - name: "Zoom Out"
+    trigger: "zoom out"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^{SUBTRACT}')"
+    description: "Zooms out current window"
+    confirm: false
+  
+  - name: "Reset Zoom"
+    trigger: "reset zoom"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^0')"
+    description: "Resets zoom to 100%"
+    confirm: false
+  
+  - name: "Select All"
+    trigger: "select all"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^a')"
+    description: "Selects all content"
+    confirm: false
+  
+  - name: "Copy Selected"
+    trigger: "copy this"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^c')"
+    description: "Copies selected content"
+    confirm: false
+  
+  - name: "Paste Clipboard"
+    trigger: "paste this"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^v')"
+    description: "Pastes from clipboard"
+    confirm: false
+  
+  - name: "Undo Action"
+    trigger: "undo that"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^z')"
+    description: "Undoes last action"
+    confirm: false
+  
+  - name: "Redo Action"
+    trigger: "redo that"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^y')"
+    description: "Redoes last action"
+    confirm: false
+  
+  - name: "Find On Page"
+    trigger: "find on page"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^f')"
+    description: "Opens find dialog"
+    confirm: false
+  
+  - name: "Save File"
+    trigger: "save file"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^s')"
+    description: "Saves current file"
+    confirm: false
+  
+  - name: "Print Page"
+    trigger: "print this"
+    action: "powershell"
+    command: "$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys('^p')"
+    description: "Opens print dialog"
+    confirm: false
+  
+  # === ENTERTAINMENT ===
+  
+  - name: "Open Spotify"
+    trigger: "open spotify"
+    action: "powershell"
+    command: "Start-Process 'https://open.spotify.com'"
+    description: "Opens Spotify web player"
+    confirm: false
+  
+  - name: "Open Twitch"
+    trigger: "open twitch"
+    action: "powershell"
+    command: "Start-Process 'https://twitch.tv'"
+    description: "Opens Twitch"
+    confirm: false
+  
+  - name: "Open Discord"
+    trigger: "open discord"
+    action: "powershell"
+    command: "Start-Process 'https://discord.com/app'"
+    description: "Opens Discord"
+    confirm: false
+  
+  - name: "Open Steam"
+    trigger: "open steam"
+    action: "powershell"
+    command: "Start-Process 'steam://open/main'"
+    description: "Opens Steam client"
+    confirm: false
+  
+  # === DEVELOPMENT ===
+  
+  - name: "Open Terminal Here"
+    trigger: "open terminal here"
+    action: "powershell"
+    command: "wt.exe -d ."
+    description: "Opens Windows Terminal in current directory"
+    confirm: false
+  
+  - name: "Open VS Code Here"
+    trigger: "open code here"
+    action: "powershell"
+    command: "code ."
+    description: "Opens VS Code in current directory"
+    confirm: false
+  
+  - name: "Show Git Status"
+    trigger: "git status"
+    action: "powershell"
+    command: "git status"
+    description: "Shows git repository status"
+    confirm: false
+  
+  - name: "Open Localhost"
+    trigger: "open localhost"
+    action: "powershell"
+    command: "Start-Process 'http://localhost:3000'"
+    description: "Opens localhost:3000"
+    confirm: false
+  
+  # === ACCESSIBILITY ===
+  
+  - name: "Enable Magnifier"
+    trigger: "enable magnifier"
+    action: "powershell"
+    command: "magnify.exe"
+    description: "Opens screen magnifier"
+    confirm: false
+  
+  - name: "Enable Narrator"
+    trigger: "enable narrator"
+    action: "powershell"
+    command: "narrator.exe"
+    description: "Enables narrator"
+    confirm: false
+  
+  - name: "Open Accessibility Settings"
+    trigger: "accessibility settings"
+    action: "powershell"
+    command: "start ms-settings:easeofaccess"
+    description: "Opens accessibility settings"
+    confirm: false
+  
+  - name: "Enable High Contrast"
+    trigger: "enable high contrast"
+    action: "powershell"
+    command: "start ms-settings:easeofaccess-highcontrast"
+    description: "Opens high contrast settings"
+    confirm: false
+  
+  # === MAINTENANCE ===
+  
+  - name: "Disk Cleanup"
+    trigger: "disk cleanup"
+    action: "powershell"
+    command: "cleanmgr.exe"
+    description: "Opens disk cleanup utility"
+    confirm: false
+  
+  - name: "Defragment Disk"
+    trigger: "defragment disk"
+    action: "powershell"
+    command: "dfrgui.exe"
+    description: "Opens disk defragmenter"
+    confirm: false
+  
+  - name: "Check Disk Space"
+    trigger: "check disk space"
+    action: "powershell"
+    command: "Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name='UsedGB';Expression={[math]::Round($_.Used/1GB,2)}}, @{Name='FreeGB';Expression={[math]::Round($_.Free/1GB,2)}} | Format-Table"
+    description: "Shows disk space for all drives"
+    confirm: false
+  
+  - name: "Open Device Manager"
+    trigger: "device manager"
+    action: "powershell"
+    command: "devmgmt.msc"
+    description: "Opens Device Manager"
+    confirm: false
+  
+  - name: "Open Services"
+    trigger: "open services"
+    action: "powershell"
+    command: "services.msc"
+    description: "Opens Windows Services"
+    confirm: false
+  
+  - name: "System Information"
+    trigger: "system information"
+    action: "powershell"
+    command: "msinfo32.exe"
+    description: "Opens System Information"
+    confirm: false
+  
+  - name: "Windows Update"
+    trigger: "windows update"
+    action: "powershell"
+    command: "start ms-settings:windowsupdate"
+    description: "Opens Windows Update"
+    confirm: false
+  
+  # === FOCUS & PRODUCTIVITY ===
+  
+  - name: "Enable Focus Assist"
+    trigger: "enable focus assist"
+    action: "powershell"
+    command: "start ms-settings:quiethours"
+    description: "Opens focus assist settings"
+    confirm: false
+  
+  - name: "Start Timer 5 Minutes"
+    trigger: "timer 5 minutes"
+    action: "powershell"
+    command: "Start-Sleep -Seconds 300; [System.Media.SystemSounds]::Beep.Play(); msg * 'Timer Complete!'"
+    description: "Sets 5 minute timer"
+    confirm: false
+  
+  - name: "Start Timer 15 Minutes"
+    trigger: "timer 15 minutes"
+    action: "powershell"
+    command: "Start-Sleep -Seconds 900; [System.Media.SystemSounds]::Beep.Play(); msg * 'Timer Complete!'"
+    description: "Sets 15 minute timer"
+    confirm: false
+  
+  - name: "Start Timer 30 Minutes"
+    trigger: "timer 30 minutes"
+    action: "powershell"
+    command: "Start-Sleep -Seconds 1800; [System.Media.SystemSounds]::Beep.Play(); msg * 'Timer Complete!'"
+    description: "Sets 30 minute timer"
+    confirm: false
+
+  # === UI THEME COMMANDS ===
+  
+  - name: "Change Theme Matrix"
+    trigger: "change theme to matrix"
+    action: "theme"
+    command: "matrix"
+    description: "Changes UI to Matrix theme"
+    confirm: false
+  
+  - name: "Change Theme Crimson"
+    trigger: "change theme to crimson"
+    action: "theme"
+    command: "crimson"
+    description: "Changes UI to Crimson theme"
+    confirm: false
+  
+  - name: "Change Theme Ocean"
+    trigger: "change theme to ocean"
+    action: "theme"
+    command: "ocean"
+    description: "Changes UI to Ocean theme"
+    confirm: false
+  
+  - name: "Change Theme Sunset"
+    trigger: "change theme to sunset"
+    action: "theme"
+    command: "sunset"
+    description: "Changes UI to Sunset theme"
+    confirm: false
+  
+  - name: "Change Theme Neon"
+    trigger: "change theme to neon"
+    action: "theme"
+    command: "neon"
+    description: "Changes UI to Neon theme"
+    confirm: false
+  
+  - name: "Change Theme Arctic"
+    trigger: "change theme to arctic"
+    action: "theme"
+    command: "arctic"
+    description: "Changes UI to Arctic theme"
+    confirm: false
+  
+  - name: "Change Theme Royal"
+    trigger: "change theme to royal"
+    action: "theme"
+    command: "royal"
+    description: "Changes UI to Royal theme"
+    confirm: false
+  
+  - name: "Change Theme Amber"
+    trigger: "change theme to amber"
+    action: "theme"
+    command: "amber"
+    description: "Changes UI to Amber theme"
+    confirm: false
+  
+  - name: "Change Theme Teal"
+    trigger: "change theme to teal"
+    action: "theme"
+    command: "holographic_teal"
+    description: "Changes UI to Holographic Teal theme"
+    confirm: false
+
+
+
+
+
+
+

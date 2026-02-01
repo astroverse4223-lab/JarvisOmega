@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "checkout.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "checkout.py"
+    }
+  ],
+  "env": {
+    "STRIPE_SECRET_KEY": "@stripe_secret_key",
+    "STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
+    "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret",
+    "PRICE_PRO_MONTHLY": "@price_pro_monthly",
+    "PRICE_PRO_YEARLY": "@price_pro_yearly",
+    "PRICE_BUSINESS_MONTHLY": "@price_business_monthly",
+    "PRICE_BUSINESS_YEARLY": "@price_business_yearly"
+  }
+}

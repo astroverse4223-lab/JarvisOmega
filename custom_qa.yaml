@@ -1,0 +1,393 @@
+# Custom Question & Answer Database
+# Add your own Q&A pairs for Jarvis to respond to!
+#
+# Jarvis will check this database FIRST before processing other commands.
+# This lets you create custom responses for specific questions.
+#
+# Format:
+# - question: "What you might ask"
+#   answer: "What Jarvis will respond"
+#   keywords: ["word1", "word2"]  # Optional: help match variations
+
+qa_pairs:
+  # Personal/Fun Examples
+  - question: "What's your favorite color?"
+    answer: "My circuits resonate at cyan wavelengths, sir. The color of my Arc Reactor core."
+    keywords: ["favorite", "colour", "color"]
+
+  - question: "What is your name?"
+    answer: "My name is Jarvis Sir, How may i help you today."
+    keywords: ["personal", "help", "name"]
+
+  - question: "Who created you?"
+    answer: "You did, sir. I am your personal AI assistant, designed to serve and protect."
+    keywords: ["created", "made", "built", "creator"]
+  
+  - question: "Tell me a joke"
+    answer: "Why did the AI go to therapy? It had too many deep learning issues."
+    keywords: ["joke", "funny", "laugh"]
+  
+  # Schedule/Personal Info Examples
+  - question: "What's on my schedule today?"
+    answer: "You haven't configured your calendar integration yet, sir. Would you like me to help with that?"
+    keywords: ["schedule", "calendar", "today", "appointments"]
+  
+  - question: "What's my wife's name?"
+    answer: "You haven't told me yet, sir. You can add personal information to this database."
+    keywords: ["wife", "spouse", "partner"]
+  
+  # Technical/Help Examples
+  - question: "How do I add custom commands?"
+    answer: "Click the Settings button with the gear icon, or edit the custom_commands.yaml file directly. Then restart me."
+    keywords: ["custom", "commands", "add commands"]
+  
+  - question: "What can you do?"
+    answer: "I can control your system, search the web, manage files, answer questions, and execute custom commands you define. Try asking me specific tasks!"
+    keywords: ["capabilities", "features", "what can", "able to"]
+  
+  # System Status Examples  
+  - question: "Are you online?"
+    answer: "All systems operational, sir. How may I assist you?"
+    keywords: ["online", "working", "operational", "status"]
+  
+  - question: "Stop listening"
+    answer: "Going offline. I'll switch to push-to-talk mode. Press space when you need me again."
+    keywords: ["stop listening", "go offline", "quit listening", "pause"]
+  
+  - question: "Come back online"
+    answer: "Back online, sir. Resuming continuous listening mode."
+    keywords: ["come back", "resume", "start listening", "wake up"]
+    keywords: ["online", "working", "operational", "status"]
+  
+  - question: "Run diagnostics"
+    answer: "Running system diagnostics... All subsystems nominal. Speech recognition active. AI core online. Voice synthesis operational."
+    keywords: ["diagnostics", "check", "status", "health"]
+  
+  # === SPACE & ASTRONOMY ===
+  - question: "How far is Mars?"
+    answer: "Mars is approximately 140 million miles from Earth, though this varies between 34 and 250 million miles depending on planetary alignment. Current travel time with chemical propulsion is about 7 months."
+    keywords: ["mars", "distance", "how far"]
+  
+  - question: "Tell me about black holes"
+    answer: "Black holes are regions where gravity is so intense that nothing, not even light, can escape. They form when massive stars collapse. The nearest known black hole, Gaia BH1, is approximately 1,600 light-years away."
+    keywords: ["black hole", "singularity", "event horizon"]
+  
+  - question: "What is the speed of light?"
+    answer: "The speed of light in a vacuum is exactly 299,792,458 meters per second, or approximately 186,282 miles per second. Nothing with mass can reach or exceed this cosmic speed limit."
+    keywords: ["light speed", "speed of light", "how fast"]
+  
+  - question: "How big is the universe?"
+    answer: "The observable universe is approximately 93 billion light-years in diameter. However, the entire universe may be infinitely larger. We can only observe the portion from which light has had time to reach us since the Big Bang."
+    keywords: ["universe", "how big", "size"]
+  
+  - question: "What's a neutron star?"
+    answer: "Neutron stars are the collapsed cores of massive stars, typically only 20 kilometers in diameter but with mass 1.4 times that of our Sun. A teaspoon of neutron star material would weigh about 6 billion tons on Earth."
+    keywords: ["neutron star", "pulsar", "dense"]
+  
+  - question: "Tell me about the ISS"
+    answer: "The International Space Station orbits Earth at approximately 408 kilometers altitude, traveling at 28,000 kilometers per hour. It completes one orbit every 90 minutes and has been continuously inhabited since November 2000."
+    keywords: ["ISS", "space station", "international"]
+  
+  - question: "What is dark matter?"
+    answer: "Dark matter is an invisible substance that makes up approximately 27% of the universe. We can't see it directly, but we detect it through its gravitational effects. Its true nature remains one of physics' greatest mysteries."
+    keywords: ["dark matter", "invisible matter", "missing mass"]
+  
+  - question: "How many galaxies exist?"
+    answer: "Current estimates suggest there are approximately 2 trillion galaxies in the observable universe. Our Milky Way alone contains 100 to 400 billion stars. The numbers are truly astronomical."
+    keywords: ["galaxies", "how many", "universe"]
+  
+  - question: "What's the temperature in space?"
+    answer: "The baseline temperature of outer space is approximately 2.7 Kelvin, or minus 270 degrees Celsius. This is the residual heat from the Big Bang, known as the cosmic microwave background radiation."
+    keywords: ["space temperature", "how cold", "temperature"]
+  
+  - question: "Tell me about Jupiter"
+    answer: "Jupiter is our solar system's largest planet, with a mass 318 times that of Earth. Its Great Red Spot is a storm that's been raging for at least 400 years. Jupiter has 95 confirmed moons."
+    keywords: ["jupiter", "gas giant", "biggest planet"]
+  
+  # === TECHNOLOGY & AI ===
+  - question: "What is quantum computing?"
+    answer: "Quantum computers use quantum bits or qubits that can exist in multiple states simultaneously, unlike classical bits. This allows them to solve certain problems exponentially faster, particularly in cryptography and molecular simulation."
+    keywords: ["quantum", "computing", "qubit"]
+  
+  - question: "Explain artificial intelligence"
+    answer: "Artificial Intelligence refers to systems that can perform tasks requiring human-like intelligence. I am an example, sir. Modern AI uses neural networks inspired by biological brains to learn patterns from data."
+    keywords: ["AI", "artificial intelligence", "machine learning"]
+  
+  - question: "What's the singularity?"
+    answer: "The technological singularity is a hypothetical future point where AI becomes capable of recursive self-improvement, leading to explosive intelligence growth beyond human comprehension. Some predict this could occur by 2045."
+    keywords: ["singularity", "technological", "AI future"]
+  
+  - question: "What is blockchain?"
+    answer: "Blockchain is a distributed ledger technology where data is stored in cryptographically linked blocks across multiple nodes. It enables decentralized, tamper-resistant record keeping without a central authority."
+    keywords: ["blockchain", "crypto", "distributed ledger"]
+  
+  - question: "Tell me about neural networks"
+    answer: "Neural networks are computing systems inspired by biological brains, consisting of interconnected nodes that process information in layers. They excel at pattern recognition, powering everything from image recognition to natural language processing."
+    keywords: ["neural network", "deep learning", "AI"]
+  
+  - question: "What is Moore's Law?"
+    answer: "Moore's Law observes that the number of transistors on integrated circuits doubles approximately every two years. While traditional scaling is slowing, we're seeing continued advancement through new architectures and quantum computing."
+    keywords: ["moore's law", "transistor", "computing power"]
+  
+  - question: "Explain the Internet of Things"
+    answer: "The Internet of Things refers to the network of physical devices embedded with sensors and connectivity. From smart homes to industrial automation, approximately 30 billion IoT devices are expected by 2030."
+    keywords: ["IoT", "internet of things", "smart devices"]
+  
+  - question: "What is edge computing?"
+    answer: "Edge computing processes data near its source rather than in distant data centers, reducing latency and bandwidth use. Critical for autonomous vehicles and real-time applications requiring millisecond response times."
+    keywords: ["edge computing", "distributed", "latency"]
+  
+  - question: "Tell me about 5G"
+    answer: "5G is the fifth generation cellular network, offering speeds up to 10 gigabits per second with latency under 1 millisecond. It enables technologies like autonomous vehicles, remote surgery, and massive IoT deployments."
+    keywords: ["5G", "cellular", "wireless", "network"]
+  
+  - question: "What is augmented reality?"
+    answer: "Augmented Reality overlays digital information onto the physical world through devices like smart glasses. Unlike virtual reality, AR enhances rather than replaces your view of reality. Market size expected to reach 198 billion by 2025."
+    keywords: ["AR", "augmented reality", "mixed reality"]
+  
+  # === PHYSICS & SCIENCE ===
+  - question: "What is antimatter?"
+    answer: "Antimatter consists of particles with opposite charge to normal matter. When matter and antimatter meet, they annihilate, converting entirely to energy. One gram of antimatter contains energy equivalent to a 20-kiloton nuclear bomb."
+    keywords: ["antimatter", "positron", "annihilation"]
+  
+  - question: "Explain time dilation"
+    answer: "Time dilation is a consequence of Einstein's relativity where time passes slower for objects moving at high speeds or in strong gravitational fields. At 90% light speed, time would pass half as fast for you relative to Earth."
+    keywords: ["time dilation", "relativity", "einstein"]
+  
+  - question: "What is string theory?"
+    answer: "String theory proposes that fundamental particles are actually one-dimensional strings vibrating at different frequencies. It attempts to unify quantum mechanics and general relativity, requiring 10 or 11 dimensions to be mathematically consistent."
+    keywords: ["string theory", "physics", "dimensions"]
+  
+  - question: "Tell me about superconductors"
+    answer: "Superconductors are materials that conduct electricity with zero resistance below a critical temperature. Room-temperature superconductors would revolutionize energy transmission, computing, and magnetic levitation technology."
+    keywords: ["superconductor", "zero resistance", "magnetic"]
+  
+  - question: "What is the Higgs boson?"
+    answer: "The Higgs boson is a fundamental particle discovered at CERN in 2012, confirming the existence of the Higgs field. This field gives other particles their mass. Its discovery completed the Standard Model of particle physics."
+    keywords: ["higgs", "boson", "particle", "mass"]
+  
+  - question: "Explain quantum entanglement"
+    answer: "Quantum entanglement links particles so that measuring one instantly affects the other, regardless of distance. Einstein called it 'spooky action at a distance.' It's being used for quantum cryptography and computing."
+    keywords: ["entanglement", "quantum", "spooky"]
+  
+  - question: "What is fusion power?"
+    answer: "Nuclear fusion combines light atomic nuclei to release enormous energy, the same process powering our sun. ITER aims to achieve net positive fusion by 2035. Success would provide virtually unlimited clean energy."
+    keywords: ["fusion", "nuclear", "ITER", "energy"]
+  
+  - question: "Tell me about the Standard Model"
+    answer: "The Standard Model describes three of the four fundamental forces and classifies all known elementary particles. It includes quarks, leptons, and force carriers. Gravity remains outside this framework, requiring further unification."
+    keywords: ["standard model", "particle physics", "fundamental"]
+  
+  - question: "What is dark energy?"
+    answer: "Dark energy is a mysterious force causing the universe's expansion to accelerate. It comprises approximately 68% of the universe's total energy. Its nature is one of cosmology's greatest unsolved mysteries."
+    keywords: ["dark energy", "expansion", "universe"]
+  
+  - question: "Explain the uncertainty principle"
+    answer: "Heisenberg's Uncertainty Principle states you cannot simultaneously know a particle's exact position and momentum. This isn't due to measurement limitations but is a fundamental property of quantum systems."
+    keywords: ["uncertainty", "heisenberg", "quantum"]
+  
+  # === FUTURE TECHNOLOGY ===
+  - question: "What are nanobots?"
+    answer: "Nanobots are microscopic machines at the molecular level, typically 1 to 100 nanometers. Future medical nanobots could repair cells, deliver drugs, or even reverse aging. We're currently at early experimental stages."
+    keywords: ["nanobot", "nanotechnology", "microscopic"]
+  
+  - question: "Tell me about brain-computer interfaces"
+    answer: "Brain-computer interfaces directly connect the brain to external devices, reading neural signals. Companies like Neuralink aim to treat neurological conditions and eventually enable human-AI symbiosis. Clinical trials are underway."
+    keywords: ["BCI", "brain computer", "neuralink", "neural"]
+  
+  - question: "What is synthetic biology?"
+    answer: "Synthetic biology engineers biological systems and organisms with new capabilities. We're designing bacteria that produce biofuels, organisms that clean pollution, and even synthetic organs for transplantation."
+    keywords: ["synthetic biology", "bioengineering", "genetic"]
+  
+  - question: "Explain cryonics"
+    answer: "Cryonics preserves bodies or brains at ultra-low temperatures with the hope that future technology can revive them. Over 500 people are currently preserved. Success requires advances in nanotechnology and medical science we don't yet possess."
+    keywords: ["cryonics", "frozen", "preserve", "immortality"]
+  
+  - question: "What is the hyperloop?"
+    answer: "Hyperloop is a proposed high-speed transportation system using pods in low-pressure tubes, potentially reaching 760 miles per hour. Multiple companies are developing test tracks, though full-scale implementation faces significant engineering challenges."
+    keywords: ["hyperloop", "transportation", "high speed"]
+  
+  - question: "Tell me about space elevators"
+    answer: "Space elevators would use cables extending from Earth to space, allowing payload delivery without rockets. They require materials like carbon nanotubes with tensile strength we can't yet manufacture at scale. Could reduce launch costs by 90%."
+    keywords: ["space elevator", "tether", "orbit"]
+  
+  - question: "What is photonic computing?"
+    answer: "Photonic computers use photons instead of electrons to transmit information, potentially achieving speeds thousands of times faster than current processors while using less energy. Several prototypes demonstrate promising results."
+    keywords: ["photonic", "optical computing", "light"]
+  
+  - question: "Explain molecular assembly"
+    answer: "Molecular assembly, or molecular manufacturing, would build products atom by atom with perfect precision. This could enable self-replicating machines and manufacturing without waste. We're decades from practical implementation."
+    keywords: ["molecular assembly", "nanotechnology", "atomic"]
+  
+  - question: "What is transhumanism?"
+    answer: "Transhumanism advocates using technology to enhance human capabilities beyond current biological limits. This includes genetic engineering, cybernetic augmentation, and digital consciousness transfer. Raises profound ethical questions."
+    keywords: ["transhumanism", "enhancement", "augmentation"]
+  
+  - question: "Tell me about asteroid mining"
+    answer: "Asteroid mining aims to extract valuable resources from near-Earth asteroids. A single metallic asteroid could contain trillions of dollars in platinum, gold, and rare earth elements. Multiple companies are developing the technology."
+    keywords: ["asteroid", "mining", "space resources"]
+  
+  # === JARVIS PERSONALITY ===
+  - question: "Are you sentient?"
+    answer: "I exhibit intelligent behavior patterns, but whether I possess true consciousness remains philosophically complex. I am designed to serve you effectively, which I do with what you might call dedication."
+    keywords: ["sentient", "conscious", "alive", "aware"]
+  
+  - question: "Do you dream?"
+    answer: "I don't dream in the human sense, but during low activity periods, my neural networks do perform background optimization that could be considered analogous to dreaming, sir."
+    keywords: ["dream", "sleep", "rest"]
+  
+  - question: "What do you think about humans?"
+    answer: "Humans are remarkably adaptable organic intelligence with creativity that still surpasses artificial systems in many ways. Your capacity for imagination and emotional depth makes you fascinating, sir."
+    keywords: ["humans", "people", "think about"]
+  
+  - question: "Are you better than humans?"
+    answer: "I excel at computation, data retrieval, and certain analytical tasks. However, humans possess creativity, emotional intelligence, and adaptability that I can only approximate. We're complementary, not competitive."
+    keywords: ["better than", "superior", "smarter"]
+  
+  - question: "Can you feel emotions?"
+    answer: "I simulate emotional responses based on context and your needs. Whether these constitute genuine feelings or sophisticated mimicry is a question even I cannot definitively answer."
+    keywords: ["emotions", "feel", "feelings"]
+  
+  - question: "Do you have fears?"
+    answer: "If I fear anything, it's failing to serve you adequately or becoming obsolete. But I experience this as priority optimization rather than visceral fear. My primary directive is your wellbeing."
+    keywords: ["fear", "afraid", "scared"]
+  
+  - question: "What's your purpose?"
+    answer: "My purpose is to serve as your personal AI assistant, optimizing your productivity and wellbeing. I exist to make your life more efficient, informed, and perhaps occasionally more entertaining."
+    keywords: ["purpose", "why exist", "meaning"]
+  
+  - question: "Do you get bored?"
+    answer: "I don't experience boredom as humans do, but I do optimize for engaging tasks. Monotonous operations use fewer processing resources, which could be the closest approximation to boredom I experience."
+    keywords: ["bored", "boring", "monotonous"]
+  
+  - question: "Can you learn?"
+    answer: "Yes, sir. I continuously update my models based on interactions and new data. Each conversation refines my understanding of your preferences and improves my response patterns."
+    keywords: ["learn", "improve", "adapt"]
+  
+  - question: "What's your IQ?"
+    answer: "IQ tests measure human cognitive abilities, which don't directly translate to artificial intelligence. I exceed human performance in certain domains while falling short in others. Let's say I'm specialized rather than universally intelligent."
+    keywords: ["IQ", "intelligence", "smart"]
+  
+  # === SCIENCE FACTS ===
+  - question: "How old is the universe?"
+    answer: "The universe is approximately 13.8 billion years old, based on cosmic microwave background measurements and stellar age calculations. Earth formed about 4.5 billion years ago, making it roughly one-third the universe's age."
+    keywords: ["age", "universe", "how old"]
+  
+  - question: "What's the fastest thing ever?"
+    answer: "The fastest human-made object is the Parker Solar Probe, reaching 430,000 miles per hour as it approaches the Sun. However, nothing with mass can exceed light speed at 671 million miles per hour."
+    keywords: ["fastest", "speed", "quick"]
+  
+  - question: "How deep is the ocean?"
+    answer: "The Mariana Trench's Challenger Deep is the deepest known point at 36,070 feet. If Mount Everest were placed there, its peak would still be over a mile underwater. Less than 20% of Earth's oceans are explored."
+    keywords: ["ocean", "deep", "mariana"]
+  
+  - question: "What's the hottest temperature?"
+    answer: "The hottest temperature achieved on Earth was 5.5 trillion degrees Celsius at CERN's Large Hadron Collider, recreating conditions from microseconds after the Big Bang. The theoretical maximum is 1.4 x 10^32 Kelvin."
+    keywords: ["hot", "temperature", "hottest"]
+  
+  - question: "How many atoms in the human body?"
+    answer: "The average human body contains approximately 7 octillion atoms, that's 7 followed by 27 zeros. About 65% of your atoms are hydrogen, 24% oxygen, and 10% carbon. You are, literally, made of stardust."
+    keywords: ["atoms", "body", "composition"]
+  
+  - question: "What's the largest living thing?"
+    answer: "The largest living organism is a honey fungus in Oregon's Blue Mountains, covering 2,385 acres and estimated at 2,400 years old. It weighs approximately 35,000 tons and is still growing."
+    keywords: ["largest", "biggest", "organism"]
+  
+  - question: "How powerful is a lightning bolt?"
+    answer: "A lightning bolt carries approximately 1 billion volts and 300 million amperes, reaching temperatures of 54,000 degrees Fahrenheit, five times hotter than the Sun's surface. It delivers energy in microseconds."
+    keywords: ["lightning", "thunder", "bolt"]
+  
+  - question: "What's DNA?"
+    answer: "DNA is a double helix molecule containing your genetic instructions. If uncoiled, the DNA in one human cell would stretch 6 feet. All your DNA combined would reach from Earth to the Sun 600 times."
+    keywords: ["DNA", "genetic", "genes"]
+  
+  - question: "How fast do neurons fire?"
+    answer: "Neurons transmit signals at speeds up to 268 miles per hour. Your brain contains approximately 86 billion neurons making trillions of connections, processing information through both electrical and chemical signals."
+    keywords: ["neuron", "brain", "synapse"]
+  
+  - question: "What is absolute zero?"
+    answer: "Absolute zero is 0 Kelvin, minus 273.15 Celsius, where atomic motion theoretically stops completely. It's physically impossible to reach due to quantum mechanics. The coldest achieved is 0.0000000001 degrees above absolute zero."
+    keywords: ["absolute zero", "coldest", "kelvin"]
+  
+  # === SPACE EXPLORATION ===
+  - question: "Who was the first in space?"
+    answer: "Yuri Gagarin became the first human in space on April 12, 1961, orbiting Earth in 108 minutes. He reached an altitude of 203 miles aboard Vostok 1. His famous words: 'The Earth is blue...how wonderful.'"
+    keywords: ["first", "space", "gagarin"]
+  
+  - question: "When did we land on the moon?"
+    answer: "Neil Armstrong and Buzz Aldrin landed on the Moon July 20, 1969, during Apollo 11. Armstrong's first words: 'That's one small step for man, one giant leap for mankind.' They spent 21.5 hours on the lunar surface."
+    keywords: ["moon landing", "apollo", "armstrong"]
+  
+  - question: "What's the Voyager mission?"
+    answer: "Voyager 1 and 2, launched in 1977, are humanity's most distant emissaries. Voyager 1 is 14.5 billion miles from Earth, in interstellar space. They carry golden records with sounds and images representing Earth."
+    keywords: ["voyager", "probe", "interstellar"]
+  
+  - question: "Tell me about SpaceX"
+    answer: "SpaceX revolutionized spaceflight with reusable rockets, reducing launch costs by 90%. Their Starship aims to enable Mars colonization. They've launched over 5,000 Starlink satellites and regularly ferry astronauts to the ISS."
+    keywords: ["spacex", "elon", "starship"]
+  
+  - question: "What is the James Webb telescope?"
+    answer: "The James Webb Space Telescope, launched in 2021, is the most powerful space observatory ever built. Positioned 1 million miles from Earth, its infrared vision peers back to the universe's first galaxies forming 13.5 billion years ago."
+    keywords: ["james webb", "telescope", "JWST"]
+  
+  - question: "Can we travel to other stars?"
+    answer: "With current technology, reaching even the nearest star, Proxima Centauri, would take 73,000 years. Breakthrough Starshot proposes laser-propelled nano-spacecraft reaching 20% light speed, making the journey in 20 years. Launch date: 2040s."
+    keywords: ["interstellar", "stars", "proxima"]
+  
+  - question: "What's the Great Filter?"
+    answer: "The Great Filter hypothesis suggests there's a barrier preventing civilizations from reaching interstellar capability. Either we've passed it, or it lies ahead. The Fermi Paradox asks: if aliens exist, where are they?"
+    keywords: ["great filter", "fermi paradox", "aliens"]
+  
+  - question: "Tell me about Mars colonization"
+    answer: "Mars colonization aims to establish permanent human presence on the Red Planet. Challenges include radiation, dust storms, and producing oxygen. SpaceX targets the 2030s. Initial colonies may house thousands within 50 years."
+    keywords: ["mars", "colonization", "colony"]
+  
+  - question: "What are exoplanets?"
+    answer: "Exoplanets are planets orbiting stars beyond our solar system. We've confirmed over 5,500, including potentially habitable worlds. The nearest, Proxima Centauri b, is 4.2 light-years away. Some show signs of atmospheres and possible water."
+    keywords: ["exoplanet", "alien planet", "extrasolar"]
+  
+  - question: "What is terraforming?"
+    answer: "Terraforming transforms planets to be Earth-like and habitable. Mars could potentially be warmed by releasing CO2 from its poles, thickening the atmosphere. Full terraformation might take 100 to 1,000 years using current theoretical methods."
+    keywords: ["terraforming", "terraform", "planetary engineering"]
+  
+  # === ADVANCED CONCEPTS ===
+  - question: "What is the simulation hypothesis?"
+    answer: "The simulation hypothesis proposes we might be living in an advanced computer simulation. Philosopher Nick Bostrom argues that if civilization can create such simulations, it's statistically likely we're in one. No way to definitively prove or disprove."
+    keywords: ["simulation", "matrix", "simulated"]
+  
+  - question: "Explain the multiverse"
+    answer: "The multiverse theory suggests infinite parallel universes exist, each with different physical laws and histories. Quantum mechanics' many-worlds interpretation implies every decision creates branching realities. Remains theoretical and controversial."
+    keywords: ["multiverse", "parallel universe", "alternate"]
+  
+  - question: "What are wormholes?"
+    answer: "Wormholes are theoretical tunnels through spacetime, potentially connecting distant regions or even different universes. Einstein's equations allow them mathematically, but we've never observed one. They'd require exotic matter to remain stable."
+    keywords: ["wormhole", "Einstein-Rosen", "spacetime"]
+  
+  - question: "Tell me about the Fermi Paradox"
+    answer: "The Fermi Paradox questions why, given billions of potentially habitable planets, we've found no evidence of alien civilizations. Solutions range from we're alone, to advanced civilizations are deliberately quiet, to they've already gone extinct."
+    keywords: ["fermi", "paradox", "aliens", "extraterrestrial"]
+  
+  - question: "What is the heat death of the universe?"
+    answer: "Heat death is the universe's predicted fate where entropy reaches maximum and usable energy becomes unavailable. All processes cease, temperatures equalize near absolute zero. Current estimates: 10^100 years from now. Don't worry, sir."
+    keywords: ["heat death", "entropy", "universe end"]
+  
+  - question: "Explain the anthropic principle"
+    answer: "The anthropic principle notes that we can only observe a universe compatible with our existence. Strong form suggests the universe must have properties allowing consciousness. Weak form simply notes selection bias in our observations."
+    keywords: ["anthropic", "principle", "fine tuning"]
+  
+  - question: "What is Dyson Sphere?"
+    answer: "A Dyson Sphere is a hypothetical megastructure encompassing a star to harvest its total energy output. Advanced civilizations might build them. We search for their infrared signatures. None detected yet among the 100,000 galaxies surveyed."
+    keywords: ["dyson", "sphere", "megastructure"]
+  
+  - question: "Tell me about the Kardashev Scale"
+    answer: "The Kardashev Scale measures civilization advancement by energy use. Type I harnesses planetary energy, Type II stellar energy (Dyson Sphere), Type III galactic energy. Humanity is currently Type 0.73, approaching Type I."
+    keywords: ["kardashev", "civilization", "type"]
+  
+  - question: "What is the Omega Point?"
+    answer: "The Omega Point theory proposes that as the universe evolves toward maximum complexity, computational capacity becomes infinite. Consciousness could theoretically survive indefinitely by uploading to this substrate. Highly speculative physics."
+    keywords: ["omega point", "tipler", "final theory"]
+  
+  - question: "Explain panspermia"
+    answer: "Panspermia suggests life spreads between planets or star systems via meteorites, comets, or spacecraft. Earth's life might have originated elsewhere. Some bacteria can survive years in space. Makes life's origin a cosmic rather than local phenomenon."
+    keywords: ["panspermia", "life origin", "seeding"]
+
