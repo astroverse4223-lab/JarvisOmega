@@ -507,12 +507,13 @@ commands:
     description: "Display top running processes"
     confirm: false
   
-  - name: "Set Timer"
+  - name: "Set Timer 5 Minutes"
     trigger: "set timer"
     action: "python"
-    command: "scripts/timer.py"
+    command: "scripts/timer.py 5"
     description: "Start a 5-minute countdown timer"
     confirm: false
+    background: true
   
   - name: "Enable Airplane Mode"
     trigger: "enable airplane mode"
@@ -908,26 +909,109 @@ commands:
     description: "Opens focus assist settings"
     confirm: false
   
+  - name: "Start Timer 1 Minute"
+    trigger: "timer 1 minute"
+    action: "python"
+    command: "scripts/timer.py 1"
+    description: "Sets 1 minute timer"
+    confirm: false
+    background: true
+
+  - name: "Start Timer 2 Minutes"
+    trigger: "timer 2 minutes"
+    action: "python"
+    command: "scripts/timer.py 2"
+    description: "Sets 2 minute timer"
+    confirm: false
+    background: true
+
+  - name: "Start Timer 3 Minutes"
+    trigger: "timer 3 minutes"
+    action: "python"
+    command: "scripts/timer.py 3"
+    description: "Sets 3 minute timer"
+    confirm: false
+    background: true
+
   - name: "Start Timer 5 Minutes"
     trigger: "timer 5 minutes"
-    action: "powershell"
-    command: "Start-Sleep -Seconds 300; [System.Media.SystemSounds]::Beep.Play(); msg * 'Timer Complete!'"
+    action: "python"
+    command: "scripts/timer.py 5"
     description: "Sets 5 minute timer"
     confirm: false
+    background: true
+
+  - name: "Start Timer 10 Minutes"
+    trigger: "timer 10 minutes"
+    action: "python"
+    command: "scripts/timer.py 10"
+    description: "Sets 10 minute timer"
+    confirm: false
+    background: true
   
   - name: "Start Timer 15 Minutes"
     trigger: "timer 15 minutes"
-    action: "powershell"
-    command: "Start-Sleep -Seconds 900; [System.Media.SystemSounds]::Beep.Play(); msg * 'Timer Complete!'"
+    action: "python"
+    command: "scripts/timer.py 15"
     description: "Sets 15 minute timer"
     confirm: false
+    background: true
+
+  - name: "Start Timer 20 Minutes"
+    trigger: "timer 20 minutes"
+    action: "python"
+    command: "scripts/timer.py 20"
+    description: "Sets 20 minute timer"
+    confirm: false
+    background: true
+
+  - name: "Start Timer 25 Minutes"
+    trigger: "timer 25 minutes"
+    action: "python"
+    command: "scripts/timer.py 25"
+    description: "Sets 25 minute timer (Pomodoro)"
+    confirm: false
+    background: true
   
   - name: "Start Timer 30 Minutes"
     trigger: "timer 30 minutes"
-    action: "powershell"
-    command: "Start-Sleep -Seconds 1800; [System.Media.SystemSounds]::Beep.Play(); msg * 'Timer Complete!'"
+    action: "python"
+    command: "scripts/timer.py 30"
     description: "Sets 30 minute timer"
     confirm: false
+    background: true
+
+  - name: "Start Timer 45 Minutes"
+    trigger: "timer 45 minutes"
+    action: "python"
+    command: "scripts/timer.py 45"
+    description: "Sets 45 minute timer"
+    confirm: false
+    background: true
+
+  - name: "Start Timer 60 Minutes"
+    trigger: "timer 60 minutes"
+    action: "python"
+    command: "scripts/timer.py 60"
+    description: "Sets 60 minute timer (1 hour)"
+    confirm: false
+    background: true
+
+  - name: "Start Timer 1 Hour"
+    trigger: "timer 1 hour"
+    action: "python"
+    command: "scripts/timer.py 60"
+    description: "Sets 1 hour timer"
+    confirm: false
+    background: true
+
+  - name: "Start Pomodoro Timer"
+    trigger: "start pomodoro"
+    action: "python"
+    command: "scripts/timer.py 25 Pomodoro"
+    description: "Starts 25-minute Pomodoro timer"
+    confirm: false
+    background: true
 
   # === UI THEME COMMANDS ===
   

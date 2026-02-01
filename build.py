@@ -8,7 +8,38 @@ import PyInstaller.__main__
 import os
 from pathlib import Path
 import sys
+import shutil
+import time
 
+
+def clean_build_dirs(project_dir):
+    """Clean build and dist directories with retry logic."""
+    dirs_to_clean = [
+        project_dir / 'dist' / 'Jarvis',
+        project_dir / 'build'
+    ]
+    
+    for dir_path in dirs_to_clean:
+        if dir_path.exists():
+            print(f"Cleaning {dir_path}...")
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # Try to rename first (works even if locked)
+                    temp_name = dir_path.parent / f"{dir_path.name}_old_{int(time.time())}"
+                    if dir_path.exists():
+                        shutil.move(str(dir_path), str(temp_name))
+                    # Then try to delete the renamed directory
+                    if temp_name.exists():
+                        shutil.rmtree(temp_name, ignore_errors=True)
+                    break
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        print(f"  Retry {attempt + 1}/{max_retries}...")
+                        time.sleep(1)
+                    else:
+                        print(f"  Warning: Could not fully clean {dir_path.name}: {e}")
+                        print(f"  Continuing anyway...")
 
 def build_executable():
     """Build Jarvis executable."""
@@ -21,6 +52,9 @@ def build_executable():
     # Ensure we're in the project directory
     project_dir = Path(__file__).parent
     os.chdir(project_dir)
+    
+    # Clean build directories before starting
+    clean_build_dirs(project_dir)
     
     print(f"Project directory: {project_dir}")
     print(f"Config file exists: {(project_dir / 'config.yaml').exists()}")
@@ -95,9 +129,10 @@ def build_executable():
         '--exclude-module=IPython',
         '--exclude-module=jupyter',
         
-        # Clean build
-        '--clean',
-        '--noconfirm',  # Don't ask for confirmation when removing dist
+        # Don't use --clean to avoid PyInstaller's directory removal issues
+        # We handle cleanup manually with better error handling
+        # '--clean',
+        '--noconfirm',  # Don't ask for confirmation
         
         # Output directory
         '--distpath=dist',
@@ -113,25 +148,54 @@ def build_executable():
         # Run PyInstaller
         PyInstaller.__main__.run(options)
         
-        print()
-        print("=" * 60)
-        print("[SUCCESS] Build completed successfully!")
-        print("=" * 60)
-        print()
-        print(f"Executable location: {project_dir / 'dist' / 'Jarvis' / 'Jarvis.exe'}")
-        print()
-        print("Important Notes:")
-        print("   1. The 'Jarvis' folder in 'dist/' contains everything needed")
-        print("   2. config.yaml, custom_commands.yaml, and custom_qa.yaml are included")
-        print("   3. Share the entire 'Jarvis' folder, not just the .exe")
-        print("   4. Users can run without Ollama if AI is disabled in config.yaml")
-        print("   5. With AI enabled, users need Ollama installed")
-        print("   6. The folder is ~200-300 MB due to Whisper models")
-        print()
-        print("To run:")
-        print(f"   cd dist\\Jarvis")
-        print(f"   .\\Jarvis.exe")
-        print()
+        # Manual COLLECT step - copy from build to dist
+        # This avoids PyInstaller's directory removal issues
+        dist_dir = project_dir / 'dist' / 'Jarvis_final'
+        build_dir = project_dir / 'build' / 'Jarvis'
+        
+        if build_dir.exists():
+            print()
+            print("Manually copying build output to dist folder...")
+            
+            # Remove old dist if exists
+            if dist_dir.exists():
+                try:
+                    shutil.rmtree(dist_dir, ignore_errors=True)
+                except:
+                    pass
+            
+            # Create dist directory and copy everything
+            dist_dir.mkdir(parents=True, exist_ok=True)
+            for item in build_dir.iterdir():
+                dest = dist_dir / item.name
+                if item.is_file():
+                    shutil.copy2(item, dest)
+                else:
+                    if dest.exists():
+                        shutil.rmtree(dest, ignore_errors=True)
+                    shutil.copytree(item, dest)
+            
+            print()
+            print("=" * 60)
+            print("[SUCCESS] Build completed successfully!")
+            print("=" * 60)
+            print()
+            print(f"Executable location: {dist_dir / 'Jarvis.exe'}")
+            print()
+            print("Important Notes:")
+            print("   1. The 'Jarvis_final' folder in 'dist/' contains everything needed")
+            print("   2. config.yaml, custom_commands.yaml, and custom_qa.yaml are included")
+            print("   3. Share the entire 'Jarvis_final' folder, not just the .exe")
+            print("   4. Users can run without Ollama if AI is disabled in config.yaml")
+            print("   5. With AI enabled, users need Ollama installed")
+            print("   6. The folder is ~200-300 MB due to Whisper models")
+            print()
+            print("To run:")
+            print(f"   cd dist\\Jarvis_final")
+            print(f"   .\\Jarvis.exe")
+            print()
+        else:
+            raise Exception("Build directory not found - PyInstaller may have failed")
         
     except Exception as e:
         print()
