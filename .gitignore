@@ -29,6 +29,11 @@ wheels/
 *.manifest
 *.spec
 
+# Build artifacts
+build/
+dist/
+releases/*.zip
+
 # Deployment
 .vercel-deploy/
 .vercel/
