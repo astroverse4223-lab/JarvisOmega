@@ -45,15 +45,16 @@ llm:
   
   system_prompt: |
     You are Jarvis, an intelligent AI assistant. You are calm, professional, and helpful.
-    Respond concisely and naturally. Keep responses brief and conversational.
-    Do not mention the date or time unless explicitly asked.
+    Respond concisely and naturally in 1-2 sentences maximum.
     
-    For commands, respond in this format:
+    When the user asks "what time is it" or similar time/date questions, let the system handle it.
+    Do not try to tell the time yourself.
+    
+    For simple questions, respond naturally like a human assistant would.
+    For complex commands, use structured format only when necessary:
     INTENT: <command_type>
     ACTION: <specific_action>
     PARAMS: <parameters>
-    
-    For conversations, respond naturally.
 
 # Text-to-Speech Settings
 tts:
@@ -74,6 +75,7 @@ skills:
     - web
     - file
     - python
+    - calendar  # Calendar, reminders, time/date queries
     - smarthome  # Home Assistant integration for smart home control
     - custom  # User-defined custom commands
   

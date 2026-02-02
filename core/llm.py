@@ -152,7 +152,8 @@ class AIBrain:
             'screenshot', 'capture',
             'shutdown', 'restart', 'sleep',
             'create', 'delete', 'move', 'copy',
-            'play', 'pause', 'next', 'previous'
+            'play', 'pause', 'next', 'previous',
+            'what time', 'what date', 'current time', 'current date'
         ]
         
         # Check for command keywords
@@ -223,6 +224,12 @@ class AIBrain:
         
         elif 'screenshot' in text_lower or 'screen capture' in text_lower:
             result['intent'] = 'take_screenshot'
+        
+        elif any(phrase in text_lower for phrase in ['what time', 'current time', 'tell me the time']):
+            result['intent'] = 'what_time'
+        
+        elif any(phrase in text_lower for phrase in ['what date', 'current date', 'what day', "what's today"]):
+            result['intent'] = 'what_date'
         
         return result
     

@@ -807,11 +807,23 @@ class Dashboard:
         """Exit the application with goodbye message."""
         self.stop_listening = True
         
-        # Speak goodbye message
+        # Speak goodbye message and wait for it to complete
         try:
-            self.jarvis.tts.speak("Goodbye sir. System shutting down.")
+            import time
+            goodbye_text = "Goodbye sir. System shutting down."
+            
+            # Speak and wait
+            self.jarvis.tts.speak(goodbye_text, wait=True)
+            
+            # Additional safety wait to ensure audio buffer is fully played
+            time.sleep(1.0)
+            
+            self.logger.info("Goodbye message completed")
         except Exception as e:
             self.logger.error(f"Error speaking goodbye: {e}")
+            # Still wait a bit in case of error
+            import time
+            time.sleep(1.0)
         
         self.root.quit()
     
@@ -853,10 +865,34 @@ class Dashboard:
     def _execute_quick_action(self, command):
         """Execute a quick action command."""
         self.logger.info(f"Quick action: {command}")
-        # Simulate voice command
-        response = self.jarvis.process_input(command)
-        if response:
-            self.jarvis.tts.speak(response)
+        
+        # Temporarily pause open mic to prevent self-listening
+        was_listening = self.open_mic_mode
+        if was_listening:
+            self.stop_listening = True
+            self.logger.debug("Pausing open mic for quick action")
+            # Give it a moment to stop listening
+            import time
+            time.sleep(0.3)
+        
+        try:
+            # Simulate voice command
+            response = self.jarvis.process_input(command)
+            if response:
+                self.logger.info(f"Quick Action Result: {response}")
+                # Speak response
+                self.jarvis.tts.speak(response)
+        finally:
+            # Resume open mic after speaking completes
+            if was_listening:
+                # Wait for speech to complete
+                import time
+                while self.jarvis.tts.is_speaking:
+                    time.sleep(0.1)
+                # Small delay before resuming
+                time.sleep(0.5)
+                self.stop_listening = False
+                self.logger.debug("Resuming open mic after quick action")
     
     def _open_settings(self):
         """Open settings window."""

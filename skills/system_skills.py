@@ -71,9 +71,11 @@ class SystemSkills(BaseSkill):
                 'calculator': 'calc.exe',
                 'paint': 'mspaint.exe',
                 'explorer': 'explorer.exe',
+                'browser': 'start http://',  # Opens default browser
                 'chrome': r'C:\Program Files\Google\Chrome\Application\chrome.exe',
                 'firefox': r'C:\Program Files\Mozilla Firefox\firefox.exe',
                 'edge': 'msedge.exe',
+                'microsoft edge': 'msedge.exe',
                 'word': 'winword.exe',
                 'excel': 'excel.exe',
                 'powerpoint': 'powerpnt.exe',

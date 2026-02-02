@@ -118,6 +118,11 @@ class SkillsEngine:
             self.skills.append(PythonSkills(self.config.get('python', {})))
             self.logger.info("✓ Python skills loaded")
         
+        if 'calendar' in enabled:
+            from skills.calendar_reminder_skills import CalendarReminderSkills
+            self.skills.append(CalendarReminderSkills(self.config.get('calendar', {})))
+            self.logger.info("✓ Calendar skills loaded")
+        
         if 'smarthome' in enabled:
             from skills.smarthome_skills import SmartHomeSkills
             self.skills.append(SmartHomeSkills(self.config.get('smarthome', {})))

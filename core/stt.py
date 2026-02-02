@@ -271,15 +271,30 @@ class SpeechRecognizer:
             if audio is None:
                 return ""
             
+            # Check if audio has sufficient energy (reduce false positives from silence/noise)
+            rms = np.sqrt(np.mean(audio**2))
+            if rms < 0.01:  # Very quiet audio, likely just noise
+                return ""
+            
             # Transcribe based on mode
             if self.mode == 'local':
                 text = self.transcribe_local(audio)
             else:
                 text = self.transcribe_api(audio)
             
-            if text:
-                self.logger.info(f"Recognized: {text}")
-            return text
+            # Filter out very short transcriptions that are likely noise
+            # Common noise patterns: "you", ".", "...", "(door slam)", etc.
+            if text and len(text.strip()) >= 3:
+                # Also filter out common noise words
+                text_lower = text.lower().strip()
+                noise_patterns = ['you', 'yeah', 'uh', 'um', 'oh', 'ah', 'huh']
+                if text_lower not in noise_patterns:
+                    self.logger.info(f"Recognized: {text}")
+                    return text
+                else:
+                    self.logger.debug(f"Filtered noise: {text}")
+            
+            return ""
         except KeyboardInterrupt:
             raise
         except Exception as e:
