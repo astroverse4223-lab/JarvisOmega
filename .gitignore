@@ -32,7 +32,7 @@ wheels/
 # Build artifacts
 build/
 dist/
-releases/*.zip
+releases/
 
 # Deployment
 .vercel-deploy/
