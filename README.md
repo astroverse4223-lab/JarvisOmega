@@ -1,4 +1,4 @@
-# Jarvis Mark III - Local AI Assistant
+# Jarvis Omega - Local AI Assistant
 
 A realistic, production-ready AI assistant for Windows that can listen, think, speak, and execute system commands locally.
 
