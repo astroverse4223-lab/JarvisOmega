@@ -76,11 +76,18 @@ Get-ChildItem -Path $tempBuildDir -Recurse -Filter "*.pyc" | Remove-Item -Force
 if (Test-Path "$tempBuildDir\logs") {
     Remove-Item "$tempBuildDir\logs" -Recurse -Force
 }
-# Clear data files (except structure)
+# Clear data files (except structure) - keep empty data folder
 if (Test-Path "$tempBuildDir\data") {
     Get-ChildItem -Path "$tempBuildDir\data" -Filter "*.db" | Remove-Item -Force
-    Get-ChildItem -Path "$tempBuildDir\data" -Filter "*.json" | Remove-Item -Force
     Get-ChildItem -Path "$tempBuildDir\data" -Filter "*.txt" | Remove-Item -Force
+    # Remove ui_settings.json if exists (will be created on first run)
+    if (Test-Path "$tempBuildDir\data\ui_settings.json") {
+        Remove-Item "$tempBuildDir\data\ui_settings.json" -Force
+    }
+}
+# Remove ui_settings.json from root if it exists
+if (Test-Path "$tempBuildDir\ui_settings.json") {
+    Remove-Item "$tempBuildDir\ui_settings.json" -Force
 }
 
 Write-Host "  [OK] Cleaned build artifacts" -ForegroundColor Green

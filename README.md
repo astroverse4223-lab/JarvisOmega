@@ -163,4 +163,4 @@ MIT - Build your own AI assistant freely
 
 ---
 
-**Jarvis Mark III** - Where engineering meets intelligence.
+**Jarvis Omega** - Where engineering meets intelligence.

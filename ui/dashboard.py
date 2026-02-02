@@ -12,6 +12,11 @@ import math
 import time
 import sys
 import os
+import psutil
+import requests
+from datetime import datetime
+import threading
+import json
 
 
 def get_resource_path(relative_path):
@@ -76,17 +81,37 @@ class SplashScreen:
         self.max_frames = 90  # 3 seconds at 30fps
         self.alpha = 0
         
-        # Particle system for splash
+        # Enhanced particle system for splash
         import random
         self.particles = []
-        for _ in range(40):
+        for _ in range(80):
+            p_type = random.choice(['dot', 'line', 'star'])
             self.particles.append({
                 'x': random.randint(0, self.width),
                 'y': random.randint(0, self.height),
-                'vx': random.uniform(-0.5, 0.5),
-                'vy': random.uniform(-0.5, 0.5),
-                'size': random.randint(1, 3)
+                'vx': random.uniform(-1.0, 1.0),
+                'vy': random.uniform(-1.0, 1.0),
+                'size': random.randint(1, 4),
+                'type': p_type,
+                'rotation': random.uniform(0, 360),
+                'speed': random.uniform(0.5, 2.0)
             })
+        
+        # Matrix rain effect
+        self.matrix_drops = []
+        for _ in range(30):
+            self.matrix_drops.append({
+                'x': random.randint(0, self.width),
+                'y': random.randint(-self.height, 0),
+                'speed': random.uniform(2, 6),
+                'length': random.randint(5, 15)
+            })
+        
+        # Energy waves
+        self.energy_waves = []
+        
+        # Orbital rings
+        self.orbital_angle = 0
         
         # Start animation
         self._animate()
@@ -109,11 +134,49 @@ class SplashScreen:
         else:
             self.alpha = 1.0
         
-        # === PARTICLES BACKGROUND ===
+        # === RADIAL GRADIENT BACKGROUND ===
+        for r in range(350, 0, -20):
+            alpha = int(30 * (1 - r / 350))
+            color = f"#{alpha:02x}{alpha:02x}{alpha+5:02x}"
+            self.canvas.create_oval(
+                cx - r, cy - r, cx + r, cy + r,
+                fill=color, outline=''
+            )
+        
+        # === MATRIX RAIN EFFECT ===
         import random
+        if self.frame > 5:
+            for drop in self.matrix_drops:
+                drop['y'] += drop['speed']
+                if drop['y'] > self.height:
+                    drop['y'] = -50
+                    drop['x'] = random.randint(0, self.width)
+                
+                # Draw matrix characters
+                for i in range(drop['length']):
+                    y_pos = drop['y'] - (i * 10)
+                    if 0 <= y_pos <= self.height:
+                        char = random.choice(['0', '1', 'A', 'I', 'J', 'V', 'S'])
+                        alpha_val = (drop['length'] - i) / drop['length']
+                        if alpha_val > 0.7:
+                            color = self.primary_color
+                        elif alpha_val > 0.4:
+                            color = self.accent_color
+                        else:
+                            color = self.secondary_color
+                        
+                        self.canvas.create_text(
+                            drop['x'], y_pos,
+                            text=char,
+                            font=('Consolas', 10),
+                            fill=color
+                        )
+        
+        # === ENHANCED PARTICLES ===
         for particle in self.particles:
-            particle['x'] += particle['vx']
-            particle['y'] += particle['vy']
+            particle['x'] += particle['vx'] * particle['speed']
+            particle['y'] += particle['vy'] * particle['speed']
+            particle['rotation'] += 2
             
             # Wrap around
             if particle['x'] < 0: particle['x'] = self.width
@@ -121,13 +184,42 @@ class SplashScreen:
             if particle['y'] < 0: particle['y'] = self.height
             elif particle['y'] > self.height: particle['y'] = 0
             
-            # Draw particle
+            # Draw particle based on type
             x, y = int(particle['x']), int(particle['y'])
             size = particle['size']
-            self.canvas.create_oval(
-                x - size, y - size, x + size, y + size,
-                fill=self.accent_color, outline=''
-            )
+            
+            if particle['type'] == 'dot':
+                self.canvas.create_oval(
+                    x - size, y - size, x + size, y + size,
+                    fill=self.accent_color, outline=''
+                )
+            elif particle['type'] == 'line':
+                angle = math.radians(particle['rotation'])
+                x1 = x + size * 3 * math.cos(angle)
+                y1 = y + size * 3 * math.sin(angle)
+                x2 = x - size * 3 * math.cos(angle)
+                y2 = y - size * 3 * math.sin(angle)
+                self.canvas.create_line(
+                    x1, y1, x2, y2,
+                    fill=self.primary_color, width=2
+                )
+            elif particle['type'] == 'star':
+                # Draw 4-pointed star
+                points = []
+                for i in range(4):
+                    angle = math.radians(i * 90 + particle['rotation'])
+                    px = x + size * 2 * math.cos(angle)
+                    py = y + size * 2 * math.sin(angle)
+                    points.extend([px, py])
+                    # Inner point
+                    angle2 = math.radians(i * 90 + 45 + particle['rotation'])
+                    px2 = x + size * 0.7 * math.cos(angle2)
+                    py2 = y + size * 0.7 * math.sin(angle2)
+                    points.extend([px2, py2])
+                if len(points) >= 6:
+                    self.canvas.create_polygon(
+                        points, fill=self.glow_color, outline=''
+                    )
         
         # === HEXAGONAL GRID PATTERN ===
         if self.frame > 10:
@@ -155,6 +247,117 @@ class SplashScreen:
                                 points, outline=self.secondary_color, 
                                 fill='', width=1
                             )
+        
+        # === ENERGY WAVES (EXPANDING FROM CENTER) ===
+        if self.frame > 20 and self.frame % 15 == 0:
+            self.energy_waves.append({'radius': 0, 'alpha': 1.0})
+        
+        for wave in self.energy_waves[:]:
+            wave['radius'] += 8
+            wave['alpha'] -= 0.03
+            
+            if wave['alpha'] > 0 and wave['radius'] < 400:
+                alpha_int = int(wave['alpha'] * 255)
+                # Clamp RGB values to 0-255 range
+                r_val = min(255, alpha_int)
+                g_val = min(255, alpha_int + 100)
+                b_val = min(255, alpha_int + 150)
+                wave_color = f"#{r_val:02x}{g_val:02x}{b_val:02x}"
+                self.canvas.create_oval(
+                    cx - wave['radius'], cy - wave['radius'],
+                    cx + wave['radius'], cy + wave['radius'],
+                    outline=wave_color, width=2
+                )
+            else:
+                self.energy_waves.remove(wave)
+        
+        # === DNA HELIX EFFECT ===
+        if self.frame > 25:
+            helix_radius = 120
+            helix_height = 200
+            num_points = 40
+            
+            for i in range(num_points):
+                t = (i / num_points) * 2 * math.pi + (self.frame * 0.1)
+                x1 = cx + helix_radius * math.cos(t)
+                y1 = cy - helix_height/2 + (i / num_points) * helix_height
+                
+                x2 = cx + helix_radius * math.cos(t + math.pi)
+                y2 = y1
+                
+                # Strand 1
+                size = 2
+                self.canvas.create_oval(
+                    x1 - size, y1 - size, x1 + size, y1 + size,
+                    fill=self.primary_color, outline=''
+                )
+                
+                # Strand 2
+                self.canvas.create_oval(
+                    x2 - size, y2 - size, x2 + size, y2 + size,
+                    fill=self.accent_color, outline=''
+                )
+                
+                # Connecting lines every few points
+                if i % 4 == 0:
+                    self.canvas.create_line(
+                        x1, y1, x2, y2,
+                        fill=self.glow_color, width=1
+                    )
+        
+        # === ORBITAL RINGS (3D EFFECT) ===
+        if self.frame > 15:
+            self.orbital_angle += 2
+            
+            # Draw 3 orbital rings
+            for orbit_idx in range(3):
+                orbit_radius = 140 + (orbit_idx * 30)
+                tilt = 60 + (orbit_idx * 20)  # Degrees
+                
+                # Draw orbital path
+                points = []
+                for angle in range(0, 360, 5):
+                    rad = math.radians(angle + self.orbital_angle + (orbit_idx * 120))
+                    tilt_rad = math.radians(tilt)
+                    
+                    x = cx + orbit_radius * math.cos(rad)
+                    y = cy + orbit_radius * math.sin(rad) * math.sin(tilt_rad)
+                    
+                    if len(points) > 0:
+                        prev_x, prev_y = points[-1]
+                        # Color based on distance from center (depth effect)
+                        depth = math.sin(rad)
+                        if depth > 0:
+                            color = self.primary_color
+                            width = 2
+                        else:
+                            color = self.secondary_color
+                            width = 1
+                        
+                        self.canvas.create_line(
+                            prev_x, prev_y, x, y,
+                            fill=color, width=width
+                        )
+                    points.append((x, y))
+                
+                # Draw orbiting node
+                node_angle = math.radians(self.orbital_angle + (orbit_idx * 120))
+                node_tilt = math.radians(tilt)
+                node_x = cx + orbit_radius * math.cos(node_angle)
+                node_y = cy + orbit_radius * math.sin(node_angle) * math.sin(node_tilt)
+                
+                # Node with glow
+                for glow_size in range(8, 2, -2):
+                    self.canvas.create_oval(
+                        node_x - glow_size, node_y - glow_size,
+                        node_x + glow_size, node_y + glow_size,
+                        outline=self.glow_color, width=1
+                    )
+                
+                self.canvas.create_oval(
+                    node_x - 4, node_y - 4, node_x + 4, node_y + 4,
+                    fill=self.accent_color, outline=self.primary_color, width=2
+                )
         
         # === MULTIPLE ROTATING RINGS ===
         for ring_idx in range(4):
@@ -327,6 +530,57 @@ class SplashScreen:
                 font=('Consolas', 11, 'bold'),
                 fill=self.primary_color
             )
+            
+            # Glowing progress indicator
+            if percentage > 0:
+                glow_x = cx - bar_width//2 + (bar_width * bar_progress)
+                for glow_r in range(10, 2, -2):
+                    glow_alpha = (10 - glow_r) / 10
+                    self.canvas.create_oval(
+                        glow_x - glow_r, cy + 253 - glow_r,
+                        glow_x + glow_r, cy + 253 + glow_r,
+                        outline=self.primary_color, width=1
+                    )
+        
+        # === TECH GRID BACKGROUND ===
+        if self.frame > 10:
+            grid_spacing = 50
+            grid_alpha = min(0.3, (self.frame - 10) / 40)
+            
+            # Vertical lines
+            for x in range(0, self.width, grid_spacing):
+                if abs(x - cx) > 200:  # Don't draw near center
+                    self.canvas.create_line(
+                        x, 0, x, self.height,
+                        fill=self.secondary_color, width=1, dash=(2, 4)
+                    )
+            
+            # Horizontal lines  
+            for y in range(0, self.height, grid_spacing):
+                if abs(y - cy) > 200:  # Don't draw near center
+                    self.canvas.create_line(
+                        0, y, self.width, y,
+                        fill=self.secondary_color, width=1, dash=(2, 4)
+                    )
+        
+        # === POWER-UP ANIMATION (STARTUP) ===
+        if self.frame < 30:
+            # Radial flash
+            flash_progress = self.frame / 30
+            flash_radius = int(flash_progress * 350)
+            flash_alpha = int((1 - flash_progress) * 100)
+            
+            if flash_alpha > 10:
+                # Clamp RGB values to 0-255 range
+                r_val = min(255, flash_alpha)
+                g_val = min(255, flash_alpha + 150)
+                b_val = min(255, flash_alpha + 200)
+                flash_color = f"#{r_val:02x}{g_val:02x}{b_val:02x}"
+                self.canvas.create_oval(
+                    cx - flash_radius, cy - flash_radius,
+                    cx + flash_radius, cy + flash_radius,
+                    outline=flash_color, width=3
+                )
         
         # === CORNER HUD ELEMENTS ===
         corner_size = 50
@@ -401,14 +655,23 @@ class SplashScreen:
             fill=self.accent_color, width=2
         )
         
-        # === VERSION TAG ===
+        # === VERSION TAG & INFO ===
         if self.frame > 30:
             self.canvas.create_text(
                 self.width - 50, self.height - 15,
-                text="v2.0",
-                font=('Consolas', 8),
-                fill=self.secondary_color,
+                text="v3.0 OMEGA",
+                font=('Consolas', 8, 'bold'),
+                fill=self.primary_color,
                 anchor='e'
+            )
+            
+            # Powered by
+            self.canvas.create_text(
+                50, self.height - 15,
+                text="◢ POWERED BY AI ◣",
+                font=('Consolas', 7),
+                fill=self.accent_color,
+                anchor='w'
             )
         
         # Continue animation
@@ -464,9 +727,9 @@ class Dashboard:
         except:
             pass
         
-        # Window size (circular holographic design)
-        self.width = 500
-        self.height = 500
+        # Window size (larger circular holographic design)
+        self.width = 600
+        self.height = 600
         self.root.geometry(f"{self.width}x{self.height}")
         
         # Center on screen
@@ -475,6 +738,9 @@ class Dashboard:
         x = (screen_width - self.width) // 2
         y = (screen_height - self.height) // 2
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
+        
+        # Mouse wheel binding for scrolling panels
+        self.root.bind('<MouseWheel>', self._on_mousewheel)
         
         # Theme system
         self.current_theme = "holographic_teal"  # Default theme
@@ -522,11 +788,40 @@ class Dashboard:
         # Audio visualization
         self.audio_level = 0  # 0.0 to 1.0
         self.audio_bars = [0] * 12  # 12 bars for equalizer
+        self.voice_waveform = [0] * 32  # Enhanced voice waveform visualizer
         
         # Particle effects
         self.particles = []
-        self.max_particles = 50
+        self.max_particles = 80  # Increased particles
         self._init_particles()
+        
+        # System monitoring
+        self.system_stats = {
+            'cpu': 0,
+            'ram': 0,
+            'network': {'sent': 0, 'recv': 0},
+            'time': datetime.now().strftime('%H:%M:%S')
+        }
+        self._update_system_stats()
+        
+        # Weather widget
+        self.weather_data = {
+            'temp': '--',
+            'condition': 'Loading',
+            'icon': '🌐'
+        }
+        self._fetch_weather()
+        
+        # Notifications
+        self.notifications = []
+        self.notification_badge_count = 0
+        
+        # Command history (recent)
+        self.command_history = []
+        self.max_history = 10
+        
+        # Avatar expressions
+        self.avatar_expression = 'neutral'  # neutral, listening, thinking, speaking, happy
         
         # Holographic scan lines
         self.scan_line_y = 0
@@ -564,6 +859,16 @@ class Dashboard:
         self.drag_x = 0
         self.drag_y = 0
         
+        # Popout panels state
+        self.active_popout = None  # 'history', 'commands', 'qa', None
+        self.popout_regions = []  # Store clickable regions
+        self.scroll_offset = {'history': 0, 'commands': 0, 'qa': 0}
+        self.selected_item = None  # For editing
+        
+        # Settings
+        self.settings_file = get_resource_path('ui_settings.json')
+        self._load_settings()
+        
         # Draw initial HUD
         self._draw_hud()
         
@@ -572,6 +877,10 @@ class Dashboard:
         
         # Auto-enable open mic mode on startup
         self.root.after(500, self._enable_open_mic)
+        
+        # Check for updates on startup (after 2 seconds)
+        if self.check_updates_on_startup:
+            self.root.after(2000, self._check_for_updates_async)
         
         self.logger.info("Modern Dashboard initialized - Open Mic Mode")
     
@@ -712,14 +1021,19 @@ class Dashboard:
         """Initialize particle system for background effects."""
         import random
         for _ in range(self.max_particles):
+            particle_type = random.choice(['dot', 'line', 'ring'])
             self.particles.append({
                 'x': random.randint(0, self.width),
                 'y': random.randint(0, self.height),
-                'vx': random.uniform(-0.5, 0.5),
-                'vy': random.uniform(-1, 0),  # Float upward
-                'size': random.randint(1, 3),
-                'alpha': random.uniform(0.3, 0.8),
-                'life': random.randint(100, 200)
+                'vx': random.uniform(-0.8, 0.8),
+                'vy': random.uniform(-1.2, 0.2),  # Float upward mostly
+                'size': random.randint(1, 4),
+                'alpha': random.uniform(0.3, 1.0),
+                'life': random.randint(150, 300),
+                'max_life': random.randint(150, 300),
+                'type': particle_type,
+                'rotation': random.uniform(0, 360),
+                'rotation_speed': random.uniform(-2, 2)
             })
     
     def _init_floating_elements(self):
@@ -737,6 +1051,80 @@ class Dashboard:
                 'pulse': 0
             })
     
+    def _update_system_stats(self):
+        """Update system statistics periodically."""
+        try:
+            self.system_stats['cpu'] = psutil.cpu_percent(interval=0.1)
+            self.system_stats['ram'] = psutil.virtual_memory().percent
+            net = psutil.net_io_counters()
+            self.system_stats['network'] = {'sent': net.bytes_sent, 'recv': net.bytes_recv}
+            self.system_stats['time'] = datetime.now().strftime('%H:%M:%S')
+        except Exception as e:
+            self.logger.error(f"Error updating system stats: {e}")
+        
+        # Schedule next update
+        self.root.after(2000, self._update_system_stats)
+    
+    def _fetch_weather(self):
+        """Fetch weather data (simplified - uses free API)."""
+        def fetch():
+            try:
+                # Using wttr.in - a simple weather service
+                response = requests.get('https://wttr.in/?format=%t+%C+%w', timeout=5)
+                if response.status_code == 200:
+                    parts = response.text.strip().split()
+                    if len(parts) >= 2:
+                        self.weather_data['temp'] = parts[0]
+                        self.weather_data['condition'] = ' '.join(parts[1:])
+                        # Set icon based on condition
+                        condition_lower = self.weather_data['condition'].lower()
+                        if 'clear' in condition_lower or 'sunny' in condition_lower:
+                            self.weather_data['icon'] = '☀️'
+                        elif 'cloud' in condition_lower:
+                            self.weather_data['icon'] = '☁️'
+                        elif 'rain' in condition_lower:
+                            self.weather_data['icon'] = '🌧️'
+                        elif 'snow' in condition_lower:
+                            self.weather_data['icon'] = '❄️'
+                        else:
+                            self.weather_data['icon'] = '🌡️'
+            except Exception as e:
+                self.logger.debug(f"Weather fetch error: {e}")
+                self.weather_data = {'temp': '--', 'condition': 'Offline', 'icon': '🌐'}
+        
+        # Fetch in background thread
+        threading.Thread(target=fetch, daemon=True).start()
+        
+        # Schedule next update (every 30 minutes)
+        self.root.after(1800000, self._fetch_weather)
+    
+    def add_notification(self, message, level='info'):
+        """Add a notification to the notification system."""
+        icon = '🔔' if level == 'info' else '⚠️' if level == 'warning' else '❌'
+        self.notifications.insert(0, {
+            'message': message,
+            'level': level,
+            'icon': icon,
+            'time': datetime.now().strftime('%H:%M')
+        })
+        self.notification_badge_count += 1
+        # Keep only last 5 notifications
+        if len(self.notifications) > 5:
+            self.notifications.pop()
+    
+    def add_to_history(self, command):
+        """Add command to recent history."""
+        self.command_history.insert(0, {
+            'text': command,
+            'time': datetime.now().strftime('%H:%M:%S')
+        })
+        if len(self.command_history) > self.max_history:
+            self.command_history.pop()
+    
+    def set_avatar_expression(self, expression):
+        """Change avatar expression based on state."""
+        self.avatar_expression = expression
+    
     def _build_ui(self):
         """Build the circular holographic interface."""
         # Main canvas
@@ -753,7 +1141,7 @@ class Dashboard:
         self.canvas.bind('<Button-1>', self._start_drag)
         self.canvas.bind('<B1-Motion>', self._on_drag)
         
-        # Click to toggle menu
+        # Click to toggle menu or popouts
         self.canvas.bind('<Button-3>', self._toggle_menu)
         self.canvas.bind('<Double-Button-1>', self._on_talk)
         
@@ -766,8 +1154,44 @@ class Dashboard:
         self.root.bind('<T>', lambda e: self._cycle_theme())
     
     def _start_drag(self, event):
-        """Start dragging the window or handle quick action click."""
-        # Check if clicking on quick action button first
+        """Start dragging the window or handle clicks on UI elements."""
+        # Check if clicking on popout panel buttons or interactive elements
+        if self.popout_regions:
+            for region_data in self.popout_regions:
+                region_type = region_data[0]
+                x1, y1, x2, y2 = region_data[1], region_data[2], region_data[3], region_data[4]
+                
+                if x1 <= event.x <= x2 and y1 <= event.y <= y2:
+                    # Handle different types of clicks
+                    if region_type == 'add_command':
+                        self._open_commands_editor()
+                        return
+                    elif region_type == 'add_qa':
+                        self._open_qa_editor()
+                        return
+                    elif region_type == 'edit_command':
+                        # Get the trigger from the stored data
+                        if len(region_data) > 5:
+                            trigger = region_data[5]
+                            self._edit_command(trigger)
+                        return
+                    elif region_type == 'edit_qa':
+                        # Get the question from the stored data
+                        if len(region_data) > 5:
+                            question = region_data[5]
+                            self._edit_qa_pair(question)
+                        return
+                    elif region_type in ['history', 'commands', 'qa']:
+                        # Toggle the popout panel
+                        if self.active_popout == region_type:
+                            self.active_popout = None  # Close if already open
+                        else:
+                            self.active_popout = region_type  # Open new panel
+                            self.scroll_offset[region_type] = 0  # Reset scroll
+                        self._draw_hud()
+                        return
+        
+        # Check if clicking on quick action button
         if self.show_quick_actions and self.quick_action_regions:
             self.logger.debug(f"Click at ({event.x}, {event.y}), checking {len(self.quick_action_regions)} regions")
             for i, (x1, y1, x2, y2) in enumerate(self.quick_action_regions):
@@ -781,6 +1205,12 @@ class Dashboard:
                         self._execute_quick_action(cmd)
                     return  # Don't start drag
         
+        # Close popout if clicking elsewhere
+        if self.active_popout:
+            self.active_popout = None
+            self._draw_hud()
+            return
+        
         # Only drag if not clicking on menu area
         if not self.menu_open:
             self.drag_x = event.x
@@ -792,6 +1222,47 @@ class Dashboard:
             x = self.root.winfo_x() + event.x - self.drag_x
             y = self.root.winfo_y() + event.y - self.drag_y
             self.root.geometry(f"+{x}+{y}")
+    
+    def _on_mousewheel(self, event):
+        """Handle mouse wheel scrolling in panels."""
+        if not self.active_popout:
+            return
+        
+        # Get scroll direction (positive = up, negative = down)
+        delta = 1 if event.delta > 0 else -1
+        
+        # Update scroll offset
+        current_offset = self.scroll_offset.get(self.active_popout, 0)
+        new_offset = max(0, current_offset - delta)
+        
+        # Get max scroll based on content
+        max_scroll = 0
+        if self.active_popout == 'commands':
+            try:
+                # Count commands from CustomSkill
+                for skill in self.jarvis.skills.skills:
+                    if skill.__class__.__name__ == 'CustomSkill':
+                        if hasattr(skill, 'custom_commands'):
+                            max_scroll = max(0, len(skill.custom_commands) - 5)
+                        break
+            except:
+                pass
+        elif self.active_popout == 'qa':
+            try:
+                # Count Q&A pairs from CustomQASkill
+                for skill in self.jarvis.skills.skills:
+                    if skill.__class__.__name__ == 'CustomQASkill':
+                        if hasattr(skill, 'qa_pairs'):
+                            max_scroll = max(0, len(skill.qa_pairs) - 4)
+                        break
+            except:
+                pass
+        elif self.active_popout == 'history':
+            max_scroll = max(0, len(self.command_history) - 8)
+        
+        new_offset = min(new_offset, max_scroll)
+        self.scroll_offset[self.active_popout] = new_offset
+        self._draw_hud()
     
     def _toggle_menu(self, event):
         """Toggle the menu window."""
@@ -902,15 +1373,15 @@ class Dashboard:
         
         self.settings_window = tk.Toplevel(self.root)
         self.settings_window.title("J.A.R.V.I.S. Settings")
-        self.settings_window.geometry("500x700")
+        self.settings_window.geometry("600x900")
         self.settings_window.configure(bg='#1a1a1a')
         
         # Center on screen
         sw = self.settings_window.winfo_screenwidth()
         sh = self.settings_window.winfo_screenheight()
-        x = (sw - 500) // 2
-        y = (sh - 700) // 2
-        self.settings_window.geometry(f"500x700+{x}+{y}")
+        x = (sw - 600) // 2
+        y = (sh - 900) // 2
+        self.settings_window.geometry(f"600x900+{x}+{y}")
         
         # Title
         title = tk.Label(
@@ -922,8 +1393,230 @@ class Dashboard:
         )
         title.pack(pady=20)
         
+        # Create scrollable container
+        main_canvas = tk.Canvas(self.settings_window, bg='#1a1a1a', highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.settings_window, orient='vertical', command=main_canvas.yview)
+        scrollable_frame = tk.Frame(main_canvas, bg='#1a1a1a')
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: main_canvas.configure(scrollregion=main_canvas.bbox("all"))
+        )
+        
+        main_canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+        main_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Enable mouse wheel scrolling
+        def _on_settings_mousewheel(event):
+            main_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        main_canvas.bind_all("<MouseWheel>", _on_settings_mousewheel)
+        
+        # Unbind when window closes
+        def on_close():
+            main_canvas.unbind_all("<MouseWheel>")
+            self.settings_window.destroy()
+        
+        self.settings_window.protocol("WM_DELETE_WINDOW", on_close)
+        
+        main_canvas.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+        
+        # === MIC MODE SETTINGS ===
+        mic_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
+        mic_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            mic_frame,
+            text="🎤 Microphone Mode:",
+            font=('Courier', 11, 'bold'),
+            fg='#00d4cc',
+            bg='#1a1a1a'
+        ).pack(anchor='w', pady=(0, 5))
+        
+        mic_mode_var = tk.StringVar(value="Open Mic" if self.open_mic_mode else "Push-to-Talk")
+        
+        def toggle_mic_mode():
+            if mic_mode_var.get() == "Open Mic":
+                if not self.open_mic_mode:
+                    self._toggle_open_mic()
+            else:
+                if self.open_mic_mode:
+                    self._toggle_open_mic()
+        
+        tk.Radiobutton(
+            mic_frame,
+            text="Open Mic (Always Listening)",
+            variable=mic_mode_var,
+            value="Open Mic",
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_mic_mode
+        ).pack(anchor='w', padx=10)
+        
+        tk.Radiobutton(
+            mic_frame,
+            text="Push-to-Talk (Space Bar)",
+            variable=mic_mode_var,
+            value="Push-to-Talk",
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_mic_mode
+        ).pack(anchor='w', padx=10)
+        
+        # === INTERRUPT KEY SETTINGS ===
+        interrupt_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
+        interrupt_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            interrupt_frame,
+            text="⏸ Interrupt Key:",
+            font=('Courier', 11, 'bold'),
+            fg='#00d4cc',
+            bg='#1a1a1a'
+        ).pack(anchor='w', pady=(0, 5))
+        
+        current_interrupt_key = getattr(self.jarvis.stt, 'interrupt_key', 'esc')
+        
+        tk.Label(
+            interrupt_frame,
+            text=f"Current: {current_interrupt_key.upper()}",
+            font=('Courier', 9),
+            fg='#ffaa00',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10)
+        
+        tk.Label(
+            interrupt_frame,
+            text="Press this key to stop JARVIS while speaking",
+            font=('Courier', 8),
+            fg='#888',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10)
+        
+        # === UI SETTINGS ===
+        ui_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
+        ui_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(
+            ui_frame,
+            text="🎨 UI Settings:",
+            font=('Courier', 11, 'bold'),
+            fg='#00d4cc',
+            bg='#1a1a1a'
+        ).pack(anchor='w', pady=(0, 5))
+        
+        # Window transparency (if supported)
+        tk.Label(
+            ui_frame,
+            text="Window Opacity:",
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10)
+        
+        def update_opacity(val):
+            try:
+                opacity = float(val) / 100
+                self.root.attributes('-alpha', opacity)
+            except:
+                pass
+        
+        opacity_scale = tk.Scale(
+            ui_frame,
+            from_=50,
+            to=100,
+            orient='horizontal',
+            bg='#2a2a2a',
+            fg='#00d4cc',
+            highlightthickness=0,
+            command=update_opacity
+        )
+        opacity_scale.set(100)
+        opacity_scale.pack(fill='x', padx=10)
+        
+        tk.Label(
+            ui_frame,
+            text="(50% = Transparent, 100% = Solid)",
+            font=('Courier', 8),
+            fg='#888',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10)
+        
+        # Animation Speed
+        tk.Label(
+            ui_frame,
+            text="Animation Speed:",
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10, pady=(10, 0))
+        
+        def change_animation_speed():
+            speed = animation_speed_var.get()
+            if speed == "Slow":
+                self.animation_delay = 100  # 10 FPS
+            elif speed == "Normal":
+                self.animation_delay = 50   # 20 FPS
+            elif speed == "Fast":
+                self.animation_delay = 33   # 30 FPS
+            self.logger.info(f"Animation speed changed to {speed}")
+            self._save_settings()
+        
+        current_delay = getattr(self, 'animation_delay', 50)
+        if current_delay >= 100:
+            default_speed = "Slow"
+        elif current_delay <= 33:
+            default_speed = "Fast"
+        else:
+            default_speed = "Normal"
+        
+        animation_speed_var = tk.StringVar(value=default_speed)
+        
+        tk.Radiobutton(
+            ui_frame,
+            text="Slow (Cinematic)",
+            variable=animation_speed_var,
+            value="Slow",
+            font=('Courier', 8),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            command=change_animation_speed
+        ).pack(anchor='w', padx=20)
+        
+        tk.Radiobutton(
+            ui_frame,
+            text="Normal (Default)",
+            variable=animation_speed_var,
+            value="Normal",
+            font=('Courier', 8),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            command=change_animation_speed
+        ).pack(anchor='w', padx=20)
+        
+        tk.Radiobutton(
+            ui_frame,
+            text="Fast (Performance)",
+            variable=animation_speed_var,
+            value="Fast",
+            font=('Courier', 8),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            command=change_animation_speed
+        ).pack(anchor='w', padx=20)
+        
         # === VOICE SELECTION ===
-        voice_frame = tk.Frame(self.settings_window, bg='#1a1a1a')
+        voice_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
         voice_frame.pack(fill='x', padx=20, pady=10)
         
         tk.Label(
@@ -1005,7 +1698,7 @@ class Dashboard:
             ).pack(anchor='w')
         
         # === GET MORE VOICES ===
-        get_voices_frame = tk.Frame(self.settings_window, bg='#1a1a1a')
+        get_voices_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
         get_voices_frame.pack(fill='x', padx=20, pady=5)
         
         tk.Label(
@@ -1088,7 +1781,7 @@ class Dashboard:
         ).pack(side='left')
         
         # === VOICE SPEED ===
-        speed_frame = tk.Frame(self.settings_window, bg='#1a1a1a')
+        speed_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
         speed_frame.pack(fill='x', padx=20, pady=10)
         
         tk.Label(
@@ -1168,7 +1861,7 @@ class Dashboard:
         ).pack(anchor='w', pady=5)
         
         # === THEME SELECTION ===
-        theme_frame = tk.Frame(self.settings_window, bg='#1a1a1a')
+        theme_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
         theme_frame.pack(fill='x', padx=20, pady=10)
         
         tk.Label(
@@ -1196,37 +1889,298 @@ class Dashboard:
             )
             rb.pack(anchor='w', padx=10)
         
-        # === QUICK ACTIONS MANAGEMENT ===
-        qa_frame = tk.Frame(self.settings_window, bg='#1a1a1a')
-        qa_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        # === ADVANCED SETTINGS ===
+        advanced_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
+        advanced_frame.pack(fill='x', padx=20, pady=10)
         
         tk.Label(
-            qa_frame,
-            text="Quick Actions:",
+            advanced_frame,
+            text="⚡ Advanced Settings:",
             font=('Courier', 11, 'bold'),
             fg='#00d4cc',
             bg='#1a1a1a'
-        ).pack(anchor='w')
+        ).pack(anchor='w', pady=(0, 5))
         
-        qa_list = tk.Listbox(
-            qa_frame,
+        # Start with Windows
+        def check_startup_enabled():
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                    r"Software\Microsoft\Windows\CurrentVersion\Run",
+                                    0, winreg.KEY_READ)
+                try:
+                    winreg.QueryValueEx(key, "JARVIS")
+                    winreg.CloseKey(key)
+                    return True
+                except:
+                    winreg.CloseKey(key)
+                    return False
+            except:
+                return False
+        
+        def toggle_startup():
+            try:
+                import winreg
+                import sys
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                    r"Software\Microsoft\Windows\CurrentVersion\Run",
+                                    0, winreg.KEY_ALL_ACCESS)
+                
+                if startup_var.get():
+                    # Add to startup
+                    exe_path = sys.executable if getattr(sys, 'frozen', False) else f'"{sys.executable}" "{os.path.abspath("main.py")}"'
+                    winreg.SetValueEx(key, "JARVIS", 0, winreg.REG_SZ, exe_path)
+                    self.logger.info("Added JARVIS to Windows startup")
+                else:
+                    # Remove from startup
+                    try:
+                        winreg.DeleteValue(key, "JARVIS")
+                        self.logger.info("Removed JARVIS from Windows startup")
+                    except:
+                        pass
+                winreg.CloseKey(key)
+            except Exception as e:
+                self.logger.error(f"Failed to modify startup settings: {e}")
+        
+        startup_var = tk.BooleanVar(value=check_startup_enabled())
+        tk.Checkbutton(
+            advanced_frame,
+            text="Start JARVIS with Windows",
+            variable=startup_var,
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_startup
+        ).pack(anchor='w', padx=10)
+        
+        # Minimize to tray
+        def toggle_tray():
+            if tray_var.get():
+                self.logger.info("System tray minimization enabled")
+                # Note: Full tray implementation requires pystray library
+            else:
+                self.logger.info("System tray minimization disabled")
+        
+        tray_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            advanced_frame,
+            text="Minimize to system tray (requires restart)",
+            variable=tray_var,
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_tray
+        ).pack(anchor='w', padx=10)
+        
+        # Auto-update
+        def toggle_updates():
+            self.check_updates_on_startup = update_var.get()
+            if self.check_updates_on_startup:
+                self.logger.info("Auto-update checking enabled")
+            else:
+                self.logger.info("Auto-update checking disabled")
+            self._save_settings()
+        
+        update_var = tk.BooleanVar(value=self.check_updates_on_startup)
+        tk.Checkbutton(
+            advanced_frame,
+            text="Check for updates on startup",
+            variable=update_var,
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_updates
+        ).pack(anchor='w', padx=10)
+        
+        # Auto-download updates
+        def toggle_auto_download():
+            self.auto_download_updates = auto_download_var.get()
+            if self.auto_download_updates:
+                self.logger.info("Auto-download updates enabled")
+            else:
+                self.logger.info("Auto-download updates disabled")
+            self._save_settings()
+        
+        auto_download_var = tk.BooleanVar(value=self.auto_download_updates)
+        tk.Checkbutton(
+            advanced_frame,
+            text="Automatically download updates",
+            variable=auto_download_var,
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_auto_download
+        ).pack(anchor='w', padx=10)
+        
+        # GitHub repo configuration
+        tk.Label(
+            advanced_frame,
+            text="GitHub Repository (owner/repo):",
+            font=('Courier', 8),
+            fg='#888',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10, pady=(5, 0))
+        
+        repo_frame = tk.Frame(advanced_frame, bg='#1a1a1a')
+        repo_frame.pack(anchor='w', padx=10, fill='x')
+        
+        repo_entry = tk.Entry(
+            repo_frame,
+            font=('Courier', 9),
             bg='#2a2a2a',
             fg='#00d4cc',
-            font=('Courier', 9),
-            selectbackground='#00d4cc',
-            selectforeground='#1a1a1a',
-            height=8
+            insertbackground='#00d4cc',
+            bd=1,
+            relief='solid'
         )
-        qa_list.pack(fill='both', expand=True, pady=5)
+        repo_entry.insert(0, self.github_repo)
+        repo_entry.pack(side='left', fill='x', expand=True, padx=(0, 5))
         
-        for cmd in self.favorite_commands:
-            qa_list.insert('end', cmd)
+        def save_repo():
+            new_repo = repo_entry.get().strip()
+            if new_repo and '/' in new_repo:
+                self.github_repo = new_repo
+                self._save_settings()
+                self.logger.info(f"GitHub repo updated to: {new_repo}")
+            else:
+                self.logger.warning("Invalid GitHub repo format. Use: owner/repo")
+        
+        tk.Button(
+            repo_frame,
+            text="Save",
+            command=save_repo,
+            bg='#2a2a2a',
+            fg='#00d4cc',
+            font=('Courier', 7, 'bold'),
+            relief='flat',
+            padx=5,
+            pady=2
+        ).pack(side='left')
+        
+        # Manual check button
+        tk.Button(
+            advanced_frame,
+            text="🔍 Check for Updates Now",
+            command=self._check_for_updates_async,
+            bg='#2a2a2a',
+            fg='#00d4cc',
+            font=('Courier', 8, 'bold'),
+            relief='flat',
+            padx=8,
+            pady=3
+        ).pack(anchor='w', padx=20, pady=5)
+        
+        # Sound effects
+        def toggle_sounds():
+            self.enable_sound_effects = sounds_var.get()
+            if self.enable_sound_effects:
+                self.logger.info("Sound effects enabled")
+            else:
+                self.logger.info("Sound effects disabled")
+            self._save_settings()
+        
+        sounds_var = tk.BooleanVar(value=getattr(self, 'enable_sound_effects', True))
+        tk.Checkbutton(
+            advanced_frame,
+            text="Enable sound effects",
+            variable=sounds_var,
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a',
+            selectcolor='#2a2a2a',
+            activebackground='#1a1a1a',
+            command=toggle_sounds
+        ).pack(anchor='w', padx=10)
+        
+        # Logging level
+        tk.Label(
+            advanced_frame,
+            text="Logging Level:",
+            font=('Courier', 9),
+            fg='#e0e6ed',
+            bg='#1a1a1a'
+        ).pack(anchor='w', padx=10, pady=(10, 0))
+        
+        def change_log_level():
+            level = log_level_var.get()
+            try:
+                import logging
+                numeric_level = getattr(logging, level)
+                logging.getLogger('jarvis').setLevel(numeric_level)
+                self.logger.setLevel(numeric_level)
+                self.logger.info(f"Logging level changed to {level}")
+            except Exception as e:
+                self.logger.error(f"Failed to change logging level: {e}")
+        
+        current_level = logging.getLevelName(self.logger.level)
+        log_level_var = tk.StringVar(value=current_level)
+        log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+        
+        log_frame = tk.Frame(advanced_frame, bg='#1a1a1a')
+        log_frame.pack(anchor='w', padx=20)
+        
+        for level in log_levels:
+            tk.Radiobutton(
+                log_frame,
+                text=level,
+                variable=log_level_var,
+                value=level,
+                font=('Courier', 8),
+                fg='#e0e6ed',
+                bg='#1a1a1a',
+                selectcolor='#2a2a2a',
+                command=change_log_level
+            ).pack(side='left', padx=5)
+        
+        # === ABOUT INFO ===
+        about_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
+        about_frame.pack(fill='x', padx=20, pady=20)
+        
+        tk.Label(
+            about_frame,
+            text="💻 About:",
+            font=('Courier', 11, 'bold'),
+            fg='#00d4cc',
+            bg='#1a1a1a'
+        ).pack(anchor='w', pady=(0, 5))
+        
+        try:
+            version_path = get_resource_path('VERSION')
+            if os.path.exists(version_path):
+                with open(version_path, 'r') as f:
+                    version = f.read().strip()
+            else:
+                version = '1.0.0'
+        except:
+            version = '1.0.0'
+        
+        info_text = f"J.A.R.V.I.S. Omega v{version}\n" \
+                    f"Just A Rather Very Intelligent System\n\n" \
+                    f"Created with Python \u2022 Powered by AI\n" \
+                    f"Licensed Software"
+        
+        tk.Label(
+            about_frame,
+            text=info_text,
+            font=('Courier', 8),
+            fg='#888',
+            bg='#1a1a1a',
+            justify='left'
+        ).pack(anchor='w', padx=10)
         
         # Close button
         tk.Button(
             self.settings_window,
             text="Close",
-            command=self.settings_window.destroy,
+            command=on_close,
             bg='#00d4cc',
             fg='#000000',
             font=('Arial', 10, 'bold'),
@@ -1273,16 +2227,75 @@ class Dashboard:
             accent_color = self.primary_glow
             status_text = "ONLINE"
         
-        # === DARK RADIAL GRADIENT BACKGROUND ===
-        # Create multiple concentric circles for gradient effect
-        max_radius = int(math.sqrt((self.width/2)**2 + (self.height/2)**2))
+        # === CIRCULAR MASK (HIDE SQUARE CORNERS) ===
+        # Create a large circular boundary and mask everything outside
+        circle_radius = min(self.width, self.height) // 2 - 10
+        
+        # Draw background first (will be masked)
+        # Fill entire canvas with transparent color first
+        self.canvas.create_rectangle(
+            0, 0, self.width, self.height,
+            fill=self.bg_color, outline=''
+        )
+        
+        # === RADIAL GRADIENT BACKGROUND (SPLASH SCREEN STYLE) ===
+        # Create smooth radial gradient from center
+        max_radius = circle_radius
         for r in range(max_radius, 0, -15):
-            alpha_val = int(255 * (1 - r / max_radius) * 0.3)
-            gradient_color = f"#{alpha_val:02x}{alpha_val:02x}{alpha_val:02x}"
+            # Calculate gradient intensity
+            intensity = int(25 * (1 - r / max_radius))
+            # Add slight blue tint
+            r_val = intensity
+            g_val = intensity
+            b_val = min(255, intensity + 8)
+            gradient_color = f"#{r_val:02x}{g_val:02x}{b_val:02x}"
             self.canvas.create_oval(
                 cx - r, cy - r, cx + r, cy + r,
                 fill=gradient_color, outline=''
             )
+        
+        # === TECH GRID BACKGROUND ===
+        grid_spacing = 50
+        grid_alpha = 0.15
+        
+        # Vertical lines (subtle)
+        for x in range(0, self.width, grid_spacing):
+            if abs(x - cx) > 180:  # Don't draw too close to center
+                self.canvas.create_line(
+                    x, 0, x, self.height,
+                    fill=self.text_dim, width=1, dash=(3, 6)
+                )
+        
+        # Horizontal lines (subtle)
+        for y in range(0, self.height, grid_spacing):
+            if abs(y - cy) > 180:  # Don't draw too close to center
+                self.canvas.create_line(
+                    0, y, self.width, y,
+                    fill=self.text_dim, width=1, dash=(3, 6)
+                )
+        
+        # === MATRIX RAIN EFFECT (SUBTLE IN BACKGROUND) ===
+        import random
+        if hasattr(self, 'ui_matrix_drops'):
+            for drop in self.ui_matrix_drops[:10]:  # Only show 10 drops
+                if random.random() > 0.95:  # 5% chance to show
+                    y_pos = (self.pulse_alpha * 10 + drop['offset']) % self.height
+                    if abs(y_pos - cy) > 150:  # Away from center
+                        char = random.choice(['0', '1', '▪', '▫', '◦'])
+                        self.canvas.create_text(
+                            drop['x'], y_pos,
+                            text=char,
+                            font=('Consolas', 8),
+                            fill=self.text_dim
+                        )
+        else:
+            # Initialize matrix drops for UI
+            self.ui_matrix_drops = []
+            for i in range(15):
+                self.ui_matrix_drops.append({
+                    'x': random.randint(50, self.width - 50),
+                    'offset': random.randint(0, self.height)
+                })
         
         # === OUTER RING LAYERS (Large to Small) ===
         # Large outer ring with glow
@@ -1529,22 +2542,128 @@ class Dashboard:
             fill=self.text_color
         )
         
-        # === BOTTOM HELP TEXT ===
-        mode_text = "● OPEN MIC MODE - ALWAYS LISTENING"
+        # === LIVE CLOCK (TOP CENTER-RIGHT, BELOW TITLE) ===
         self.canvas.create_text(
-            cx, self.height - 20,
-            text=mode_text,
-            font=('Courier New', 8),
+            cx, 40,
+            text=f"⏰ {self.system_stats['time']}",
+            font=('Consolas', 8, 'bold'),
             fill=self.text_secondary
         )
         
-        help_text = "ALWAYS LISTENING • [RIGHT-CLICK] MENU • [Q] QUICK ACTIONS • [S] SETTINGS"
+        # === SYSTEM STATS PANEL (TOP RIGHT) ===
+        stats_x = self.width - 100
+        stats_y = 60
+        
+        # CPU indicator
+        cpu_color = self.primary_glow if self.system_stats['cpu'] < 70 else '#ffaa00' if self.system_stats['cpu'] < 90 else '#ff3333'
         self.canvas.create_text(
-            cx, self.height - 35,
-            text=help_text,
-            font=('Courier New', 7),
-            fill=self.text_dim
+            stats_x, stats_y,
+            text=f"CPU {int(self.system_stats['cpu'])}%",
+            font=('Consolas', 7, 'bold'),
+            fill=cpu_color,
+            anchor='e'
         )
+        
+        # CPU bar
+        bar_width = 60
+        bar_height = 4
+        cpu_bar_fill = int((self.system_stats['cpu'] / 100) * bar_width)
+        self.canvas.create_rectangle(
+            stats_x - bar_width, stats_y + 5,
+            stats_x, stats_y + 5 + bar_height,
+            outline=self.text_dim, width=1, fill=''
+        )
+        self.canvas.create_rectangle(
+            stats_x - bar_width, stats_y + 5,
+            stats_x - bar_width + cpu_bar_fill, stats_y + 5 + bar_height,
+            fill=cpu_color, outline=''
+        )
+        
+        # RAM indicator
+        ram_color = self.primary_glow if self.system_stats['ram'] < 70 else '#ffaa00' if self.system_stats['ram'] < 90 else '#ff3333'
+        self.canvas.create_text(
+            stats_x, stats_y + 20,
+            text=f"RAM {int(self.system_stats['ram'])}%",
+            font=('Consolas', 7, 'bold'),
+            fill=ram_color,
+            anchor='e'
+        )
+        
+        # RAM bar
+        ram_bar_fill = int((self.system_stats['ram'] / 100) * bar_width)
+        self.canvas.create_rectangle(
+            stats_x - bar_width, stats_y + 25,
+            stats_x, stats_y + 25 + bar_height,
+            outline=self.text_dim, width=1, fill=''
+        )
+        self.canvas.create_rectangle(
+            stats_x - bar_width, stats_y + 25,
+            stats_x - bar_width + ram_bar_fill, stats_y + 25 + bar_height,
+            fill=ram_color, outline=''
+        )
+        
+        # === WEATHER WIDGET (TOP LEFT) ===
+        weather_x = 100
+        weather_y = 60
+        
+        self.canvas.create_text(
+            weather_x, weather_y,
+            text=self.weather_data['icon'],
+            font=('Segoe UI Emoji', 14),
+            fill=self.text_color,
+            anchor='w'
+        )
+        
+        self.canvas.create_text(
+            weather_x + 30, weather_y - 5,
+            text=self.weather_data['temp'],
+            font=('Consolas', 9, 'bold'),
+            fill=self.text_color,
+            anchor='w'
+        )
+        
+        self.canvas.create_text(
+            weather_x + 30, weather_y + 8,
+            text=self.weather_data['condition'][:15],
+            font=('Consolas', 6),
+            fill=self.text_secondary,
+            anchor='w'
+        )
+        
+        # === NOTIFICATION BADGE (TOP LEFT) ===
+        if self.notification_badge_count > 0:
+            notif_x = 50
+            notif_y = 20
+            
+            # Badge circle
+            badge_radius = 10
+            self.canvas.create_oval(
+                notif_x - badge_radius, notif_y - badge_radius,
+                notif_x + badge_radius, notif_y + badge_radius,
+                fill='#ff3333', outline=self.primary_glow, width=2
+            )
+            
+            # Badge count
+            self.canvas.create_text(
+                notif_x, notif_y,
+                text=str(min(self.notification_badge_count, 9)),
+                font=('Arial', 9, 'bold'),
+                fill='#ffffff'
+            )
+        
+        # === AVATAR ASSISTANT (BOTTOM LEFT) ===
+        avatar_x = 70
+        avatar_y = self.height - 100
+        avatar_size = 30
+        
+        # Avatar circle
+        self.canvas.create_oval(
+            avatar_x - avatar_size, avatar_y - avatar_size,
+            avatar_x + avatar_size, avatar_y + avatar_size,
+            fill=self.darker_overlay, outline=self.primary_glow, width=2
+        )
+        
+        # Avatar face based on expression\n        if self.avatar_expression == 'listening':\n            # Ears indicator\n            self.canvas.create_text(\n                avatar_x, avatar_y,\n                text='\ud83d\udc42',\n                font=('Segoe UI Emoji', 20),\n                fill=self.text_color\n            )\n        elif self.avatar_expression == 'thinking':\n            # Brain/thinking indicator\n            self.canvas.create_text(\n                avatar_x, avatar_y,\n                text='\ud83e\udde0',\n                font=('Segoe UI Emoji', 20),\n                fill='#ffaa00'\n            )\n        elif self.avatar_expression == 'speaking':\n            # Speaking indicator\n            self.canvas.create_text(\n                avatar_x, avatar_y,\n                text='\ud83d\udce3',\n                font=('Segoe UI Emoji', 20),\n                fill='#ff3333'\n            )\n        elif self.avatar_expression == 'happy':\n            # Happy face\n            self.canvas.create_text(\n                avatar_x, avatar_y,\n                text='\ud83d\ude0a',\n                font=('Segoe UI Emoji', 20),\n                fill='#00ff88'\n            )\n        else:\n            # Neutral AI icon\n            self.canvas.create_text(\n                avatar_x, avatar_y,\n                text='\ud83e\udd16',\n                font=('Segoe UI Emoji', 20),\n                fill=self.text_color\n            )\n        \n        # Avatar status text\n        self.canvas.create_text(\n            avatar_x, avatar_y + avatar_size + 15,\n            text=\"JARVIS\",\n            font=('Consolas', 7, 'bold'),\n            fill=self.text_secondary\n        )\n        \n        # === COMMAND HISTORY (BOTTOM RIGHT) ===\n        if self.command_history:\n            history_x = self.width - 150\n            history_y = self.height - 120\n            \n            self.canvas.create_text(\n                history_x, history_y,\n                text=\"\u231a RECENT\",\n                font=('Consolas', 7, 'bold'),\n                fill=self.text_dim,\n                anchor='w'\n            )\n            \n            for i, cmd in enumerate(self.command_history[:3]):\n                y_pos = history_y + 15 + (i * 12)\n                cmd_text = cmd['text'][:20] + '...' if len(cmd['text']) > 20 else cmd['text']\n                self.canvas.create_text(\n                    history_x, y_pos,\n                    text=f\"\u00bb {cmd_text}\",\n                    font=('Consolas', 6),\n                    fill=self.text_dim,\n                    anchor='w'\n                )\n        \n        # === ENHANCED VOICE WAVEFORM (when listening) ===\n        if self.current_state == \"listening\" and len(self.voice_waveform) > 0:\n            wave_y = self.height - 180\n            wave_spacing = 8\n            wave_start_x = cx - (len(self.voice_waveform) // 2) * wave_spacing\n            \n            for i, amplitude in enumerate(self.voice_waveform):\n                x = wave_start_x + (i * wave_spacing)\n                bar_height = max(2, int(amplitude * 40))\n                \n                # Color gradient based on amplitude\n                if amplitude > 0.7:\n                    color = '#00ff88'\n                elif amplitude > 0.4:\n                    color = self.primary_glow\n                else:\n                    color = self.text_dim\n                \n                self.canvas.create_rectangle(\n                    x - 2, wave_y - bar_height,\n                    x + 2, wave_y + bar_height,\n                    fill=color, outline=''\n                )\n        \n        # === BOTTOM HELP TEXT ===\n        mode_text = \"● OPEN MIC MODE - ALWAYS LISTENING\"\n        self.canvas.create_text(\n            cx, self.height - 20,\n            text=mode_text,\n            font=('Courier New', 8),\n            fill=self.text_secondary\n        )\n        \n        help_text = \"ALWAYS LISTENING • [RIGHT-CLICK] MENU • [Q] QUICK ACTIONS • [S] SETTINGS\"\n        self.canvas.create_text(\n            cx, self.height - 35,\n            text=help_text,\n            font=('Courier New', 7),\n            fill=self.text_dim\n        )
         
         # === QUICK ACTIONS PANEL ===
         if self.show_quick_actions:
@@ -1605,21 +2724,46 @@ class Dashboard:
         for particle in self.particles:
             x, y = int(particle['x']), int(particle['y'])
             size = particle['size']
+            p_type = particle['type']
+            
+            # Calculate fade based on life remaining
+            life_ratio = particle['life'] / particle['max_life']
+            alpha_factor = min(1.0, life_ratio * 1.5)  # Fade in/out
             
             # Vary color based on alpha for intensity
-            if particle['alpha'] > 0.6:
+            if particle['alpha'] * alpha_factor > 0.6:
                 particle_color = self.primary_glow
-            elif particle['alpha'] > 0.4:
+            elif particle['alpha'] * alpha_factor > 0.4:
                 particle_color = self.text_secondary
             else:
                 particle_color = self.text_dim
             
-            # Draw bright particle dot
-            self.canvas.create_oval(
-                x - size, y - size,
-                x + size, y + size,
-                fill=particle_color, outline=''
-            )
+            # Draw based on type
+            if p_type == 'dot':
+                # Standard dot particle
+                self.canvas.create_oval(
+                    x - size, y - size,
+                    x + size, y + size,
+                    fill=particle_color, outline=''
+                )
+            elif p_type == 'line':
+                # Line particle (trailing effect)
+                angle_rad = math.radians(particle['rotation'])
+                x1 = x + size * 3 * math.cos(angle_rad)
+                y1 = y + size * 3 * math.sin(angle_rad)
+                x2 = x - size * 3 * math.cos(angle_rad)
+                y2 = y - size * 3 * math.sin(angle_rad)
+                self.canvas.create_line(
+                    x1, y1, x2, y2,
+                    fill=particle_color, width=max(1, size // 2)
+                )
+            elif p_type == 'ring':
+                # Ring particle (hollow circle)
+                self.canvas.create_oval(
+                    x - size * 2, y - size * 2,
+                    x + size * 2, y + size * 2,
+                    outline=particle_color, width=1
+                )
         
         # === OVERLAY: HOLOGRAPHIC SCAN LINE (TOP LAYER) ===
         scan_y = int(self.scan_line_y)
@@ -1656,6 +2800,468 @@ class Dashboard:
                 text=elem['text'],
                 font=('Consolas', 7, 'bold'),
                 fill=text_color
+            )
+        
+        # === CIRCULAR BOUNDARY RING (FINAL LAYER) ===
+        # Draw a strong circular border to define the circular shape
+        circle_radius = min(self.width, self.height) // 2 - 10
+        
+        # Outer glow rings
+        for i in range(4):
+            glow_offset = i * 2
+            self.canvas.create_oval(
+                cx - circle_radius - glow_offset, cy - circle_radius - glow_offset,
+                cx + circle_radius + glow_offset, cy + circle_radius + glow_offset,
+                outline=self.primary_glow if i == 0 else self.secondary_glow,
+                width=3 if i == 0 else 1
+            )
+        
+        # === INTERACTIVE CIRCULAR SEGMENTS (POPOUT BUTTONS) ===
+        # Clear previous regions
+        self.popout_regions = []
+        
+        # Define 3 clickable segments around the circle (left, right, bottom)
+        segment_info = [
+            {'type': 'history', 'angle': 180, 'icon': '📜', 'label': 'HISTORY', 'color': self.accent_gold},
+            {'type': 'commands', 'angle': 0, 'icon': '⚡', 'label': 'COMMANDS', 'color': self.accent_orange},
+            {'type': 'qa', 'angle': 270, 'icon': '💬', 'label': 'Q&A', 'color': self.tertiary_glow}
+        ]
+        
+        button_radius = circle_radius + 15
+        button_size = 35
+        
+        for segment in segment_info:
+            angle_rad = math.radians(segment['angle'])
+            btn_x = cx + button_radius * math.cos(angle_rad)
+            btn_y = cy + button_radius * math.sin(angle_rad)
+            
+            # Determine if this button is active
+            is_active = (self.active_popout == segment['type'])
+            btn_color = segment['color'] if is_active else self.text_secondary
+            outline_color = segment['color'] if is_active else self.text_dim
+            outline_width = 3 if is_active else 2
+            
+            # Draw button circle
+            self.canvas.create_oval(
+                btn_x - button_size, btn_y - button_size,
+                btn_x + button_size, btn_y + button_size,
+                fill=self.darker_overlay, outline=outline_color, width=outline_width
+            )
+            
+            # Draw icon
+            self.canvas.create_text(
+                btn_x, btn_y - 5,
+                text=segment['icon'],
+                font=('Segoe UI Emoji', 16),
+                fill=btn_color
+            )
+            
+            # Draw label
+            self.canvas.create_text(
+                btn_x, btn_y + 12,
+                text=segment['label'],
+                font=('Consolas', 6, 'bold'),
+                fill=btn_color
+            )
+            
+            # Store clickable region
+            self.popout_regions.append((
+                segment['type'],
+                btn_x - button_size, btn_y - button_size,
+                btn_x + button_size, btn_y + button_size
+            ))
+        
+        # === POPOUT PANELS ===
+        if self.active_popout:
+            self._draw_popout_panel()
+        
+        # Mask corners with transparent color (outside the circle)
+        # Create polygons to cover the corners
+        corner_size = 150
+        
+        # Top-left corner
+        points_tl = [0, 0]
+        for angle in range(0, 91, 5):
+            rad = math.radians(angle)
+            x = cx - circle_radius * math.cos(math.radians(45)) + circle_radius * math.cos(rad + math.radians(180))
+            y = cy - circle_radius * math.sin(math.radians(45)) + circle_radius * math.sin(rad + math.radians(180))
+            if x < cx and y < cy:
+                points_tl.extend([x, y])
+        points_tl.extend([0, corner_size, 0, 0])
+        if len(points_tl) > 4:
+            self.canvas.create_polygon(points_tl, fill=self.bg_color, outline='')
+        
+        # Simpler corner masks
+        self.canvas.create_polygon(
+            0, 0, corner_size, 0, 0, corner_size,
+            fill=self.bg_color, outline=''
+        )
+        self.canvas.create_polygon(
+            self.width, 0, self.width - corner_size, 0, self.width, corner_size,
+            fill=self.bg_color, outline=''
+        )
+        self.canvas.create_polygon(
+            0, self.height, 0, self.height - corner_size, corner_size, self.height,
+            fill=self.bg_color, outline=''
+        )
+        self.canvas.create_polygon(
+            self.width, self.height, self.width - corner_size, self.height,
+            self.width, self.height - corner_size,
+            fill=self.bg_color, outline=''
+        )
+    
+    def _draw_popout_panel(self):
+        """Draw the active popout panel."""
+        cx = self.width // 2
+        cy = self.height // 2
+        
+        # Panel dimensions - BIGGER
+        panel_width = 350
+        panel_height = 450
+        
+        # Position based on panel type
+        if self.active_popout == 'history':
+            panel_x = 10
+            panel_y = cy - panel_height // 2
+        elif self.active_popout == 'commands':
+            panel_x = self.width - panel_width - 10
+            panel_y = cy - panel_height // 2
+        elif self.active_popout == 'qa':
+            panel_x = cx - panel_width // 2
+            panel_y = self.height - panel_height - 10
+        else:
+            return
+        
+        # Draw panel background with glow
+        for i in range(3):
+            self.canvas.create_rectangle(
+                panel_x - i, panel_y - i,
+                panel_x + panel_width + i, panel_y + panel_height + i,
+                outline=self.primary_glow if i == 0 else self.secondary_glow,
+                width=2 if i == 0 else 1
+            )
+        
+        self.canvas.create_rectangle(
+            panel_x, panel_y,
+            panel_x + panel_width, panel_y + panel_height,
+            fill='#0a0a0a', outline=''
+        )
+        
+        # Panel content based on type
+        if self.active_popout == 'history':
+            self._draw_history_panel(panel_x, panel_y, panel_width, panel_height)
+        elif self.active_popout == 'commands':
+            self._draw_commands_panel(panel_x, panel_y, panel_width, panel_height)
+        elif self.active_popout == 'qa':
+            self._draw_qa_panel(panel_x, panel_y, panel_width, panel_height)
+    
+    def _draw_history_panel(self, x, y, width, height):
+        """Draw command history panel content."""
+        # Title
+        self.canvas.create_text(
+            x + width // 2, y + 15,
+            text="📜 COMMAND HISTORY",
+            font=('Consolas', 10, 'bold'),
+            fill=self.accent_gold
+        )
+        
+        # Divider
+        self.canvas.create_line(
+            x + 10, y + 30, x + width - 10, y + 30,
+            fill=self.text_dim, width=1
+        )
+        
+        # History items
+        if self.command_history:
+            start_y = y + 45
+            for i, cmd in enumerate(self.command_history[:10]):
+                item_y = start_y + (i * 25)
+                if item_y + 20 > y + height - 10:
+                    break
+                
+                # Time
+                self.canvas.create_text(
+                    x + 15, item_y,
+                    text=cmd['time'],
+                    font=('Consolas', 7),
+                    fill=self.text_dim,
+                    anchor='w'
+                )
+                
+                # Command text
+                cmd_text = cmd['text'][:28] + '...' if len(cmd['text']) > 28 else cmd['text']
+                self.canvas.create_text(
+                    x + 15, item_y + 12,
+                    text=f"» {cmd_text}",
+                    font=('Consolas', 8, 'bold'),
+                    fill=self.text_color,
+                    anchor='w'
+                )
+        else:
+            self.canvas.create_text(
+                x + width // 2, y + height // 2,
+                text="No history yet",
+                font=('Consolas', 9),
+                fill=self.text_dim
+            )
+    
+    def _draw_commands_panel(self, x, y, width, height):
+        """Draw quick commands panel content."""
+        # Title
+        self.canvas.create_text(
+            x + width // 2, y + 15,
+            text="⚡ CUSTOM COMMANDS",
+            font=('Consolas', 10, 'bold'),
+            fill=self.accent_orange
+        )
+        
+        # Divider
+        self.canvas.create_line(
+            x + 10, y + 30, x + width - 10, y + 30,
+            fill=self.text_dim, width=1
+        )
+        
+        # Add button
+        add_btn_x = x + width - 60
+        add_btn_y = y + 12
+        self.canvas.create_rectangle(
+            add_btn_x, add_btn_y, add_btn_x + 50, add_btn_y + 20,
+            fill='#001a1a', outline=self.primary_glow, width=1
+        )
+        self.canvas.create_text(
+            add_btn_x + 25, add_btn_y + 10,
+            text="+ ADD",
+            font=('Consolas', 7, 'bold'),
+            fill=self.primary_glow
+        )
+        
+        # Store button region
+        self.popout_regions.append(('add_command', add_btn_x, add_btn_y, add_btn_x + 50, add_btn_y + 20))
+        
+        # Load actual commands
+        commands = []
+        try:
+            # Find CustomSkill in skills engine
+            for skill in self.jarvis.skills.skills:
+                if skill.__class__.__name__ == 'CustomSkill':
+                    if hasattr(skill, 'custom_commands'):
+                        # Convert list format to dict format for display
+                        for cmd in skill.custom_commands:
+                            trigger = cmd.get('trigger', 'unknown')
+                            commands.append((trigger, cmd))
+                    break
+        except Exception as e:
+            self.logger.error(f"Error loading commands: {e}")
+        
+        if not commands:
+            self.canvas.create_text(
+                x + width // 2, y + height // 2,
+                text="No custom commands\nClick + ADD to create",
+                font=('Consolas', 9),
+                fill=self.text_dim,
+                justify='center'
+            )
+            return
+        
+        # Scrollable command list
+        scroll_offset = self.scroll_offset.get('commands', 0)
+        start_y = y + 50
+        item_height = 55
+        visible_items = (height - 70) // item_height
+        
+        for i, (trigger, cmd_data) in enumerate(commands):
+            if i < scroll_offset:
+                continue
+            if i >= scroll_offset + visible_items:
+                break
+            
+            item_y = start_y + ((i - scroll_offset) * item_height)
+            
+            # Item background
+            item_bg = self.canvas.create_rectangle(
+                x + 10, item_y, x + width - 10, item_y + 50,
+                fill='#0a1414', outline=self.secondary_glow, width=1
+            )
+            
+            # Store clickable region for editing
+            self.popout_regions.append(('edit_command', x + 10, item_y, x + width - 10, item_y + 50, trigger))
+            
+            # Trigger text
+            self.canvas.create_text(
+                x + 20, item_y + 8,
+                text=f"▸ {trigger}",
+                font=('Consolas', 9, 'bold'),
+                fill=self.primary_glow,
+                anchor='w'
+            )
+            
+            # Action text
+            action_text = cmd_data.get('action', 'No action')
+            if len(action_text) > 40:
+                action_text = action_text[:37] + '...'
+            self.canvas.create_text(
+                x + 20, item_y + 25,
+                text=f"Action: {action_text}",
+                font=('Consolas', 7),
+                fill=self.text_secondary,
+                anchor='w'
+            )
+            
+            # Response text
+            response_text = cmd_data.get('response', '')
+            if response_text:
+                if len(response_text) > 40:
+                    response_text = response_text[:37] + '...'
+                self.canvas.create_text(
+                    x + 20, item_y + 38,
+                    text=f"Say: {response_text}",
+                    font=('Consolas', 7),
+                    fill=self.text_dim,
+                    anchor='w'
+                )
+        
+        # Scroll indicator
+        if len(commands) > visible_items:
+            self.canvas.create_text(
+                x + width // 2, y + height - 15,
+                text=f"↕ Scroll: {scroll_offset + 1}-{min(scroll_offset + visible_items, len(commands))} of {len(commands)}",
+                font=('Consolas', 7),
+                fill=self.text_dim
+            )
+    
+    def _draw_qa_panel(self, x, y, width, height):
+        """Draw Q&A database panel content."""
+        # Title
+        self.canvas.create_text(
+            x + width // 2, y + 15,
+            text="💬 Q&A DATABASE",
+            font=('Consolas', 10, 'bold'),
+            fill=self.tertiary_glow
+        )
+        
+        # Divider
+        self.canvas.create_line(
+            x + 10, y + 30, x + width - 10, y + 30,
+            fill=self.text_dim, width=1
+        )
+        
+        # Add button
+        add_btn_x = x + width - 60
+        add_btn_y = y + 12
+        self.canvas.create_rectangle(
+            add_btn_x, add_btn_y, add_btn_x + 50, add_btn_y + 20,
+            fill='#001a1a', outline=self.primary_glow, width=1
+        )
+        self.canvas.create_text(
+            add_btn_x + 25, add_btn_y + 10,
+            text="+ ADD",
+            font=('Consolas', 7, 'bold'),
+            fill=self.primary_glow
+        )
+        
+        # Store button region
+        self.popout_regions.append(('add_qa', add_btn_x, add_btn_y, add_btn_x + 50, add_btn_y + 20))
+        
+        # Load actual Q&A pairs
+        qa_pairs = []
+        try:
+            # Find CustomQASkill in skills engine
+            for skill in self.jarvis.skills.skills:
+                if skill.__class__.__name__ == 'CustomQASkill':
+                    if hasattr(skill, 'qa_pairs'):
+                        # qa_pairs is a list of dicts with 'question' and 'answer' keys
+                        for qa in skill.qa_pairs:
+                            question = qa.get('question', 'unknown')
+                            answer = qa.get('answer', '')
+                            qa_pairs.append((question, answer))
+                    break
+        except Exception as e:
+            self.logger.error(f"Error loading Q&A: {e}")
+        
+        if not qa_pairs:
+            self.canvas.create_text(
+                x + width // 2, y + height // 2,
+                text="No Q&A pairs\nClick + ADD to create",
+                font=('Consolas', 9),
+                fill=self.text_dim,
+                justify='center'
+            )
+            return
+        
+        # Scrollable Q&A list
+        scroll_offset = self.scroll_offset.get('qa', 0)
+        start_y = y + 50
+        item_height = 70
+        visible_items = (height - 70) // item_height
+        
+        for i, (question, answer) in enumerate(qa_pairs):
+            if i < scroll_offset:
+                continue
+            if i >= scroll_offset + visible_items:
+                break
+            
+            item_y = start_y + ((i - scroll_offset) * item_height)
+            
+            # Item background
+            self.canvas.create_rectangle(
+                x + 10, item_y, x + width - 10, item_y + 65,
+                fill='#0a1414', outline=self.secondary_glow, width=1
+            )
+            
+            # Store clickable region for editing
+            self.popout_regions.append(('edit_qa', x + 10, item_y, x + width - 10, item_y + 65, question))
+            
+            # Question
+            q_text = question if len(question) <= 42 else question[:39] + '...'
+            self.canvas.create_text(
+                x + 20, item_y + 10,
+                text=f"Q: {q_text}",
+                font=('Consolas', 8, 'bold'),
+                fill=self.primary_glow,
+                anchor='w'
+            )
+            
+            # Answer (multi-line support)
+            answer_lines = []
+            words = answer.split()
+            current_line = ""
+            for word in words:
+                test_line = current_line + (" " if current_line else "") + word
+                if len(test_line) <= 42:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        answer_lines.append(current_line)
+                    current_line = word
+            if current_line:
+                answer_lines.append(current_line)
+            
+            # Show first 2 lines of answer
+            for line_idx, line in enumerate(answer_lines[:2]):
+                self.canvas.create_text(
+                    x + 20, item_y + 30 + (line_idx * 15),
+                    text=f"A: {line}" if line_idx == 0 else f"   {line}",
+                    font=('Consolas', 7),
+                    fill=self.text_secondary,
+                    anchor='w'
+                )
+            
+            if len(answer_lines) > 2:
+                self.canvas.create_text(
+                    x + 20, item_y + 60,
+                    text="   ...",
+                    font=('Consolas', 7),
+                    fill=self.text_dim,
+                    anchor='w'
+                )
+        
+        # Scroll indicator
+        if len(qa_pairs) > visible_items:
+            self.canvas.create_text(
+                x + width // 2, y + height - 15,
+                text=f"↕ Scroll: {scroll_offset + 1}-{min(scroll_offset + visible_items, len(qa_pairs))} of {len(qa_pairs)}",
+                font=('Consolas', 7),
+                fill=self.text_dim
             )
     
     def _draw_menu(self):
@@ -2019,10 +3625,30 @@ class Dashboard:
             elem['pulse'] = (elem['pulse'] + 0.1) % (2 * 3.14159)
             elem['alpha'] = 0.3 + 0.3 * math.sin(elem['pulse'])
         
+        # Update voice waveform animation
+        import random
+        if self.current_state == "listening":
+            # Simulate voice input waveform
+            for i in range(len(self.voice_waveform)):
+                self.voice_waveform[i] = random.uniform(0.2, 0.9)
+        elif self.current_state == "speaking":
+            # Simulate speech output waveform
+            for i in range(len(self.voice_waveform)):
+                self.voice_waveform[i] = random.uniform(0.4, 1.0)
+        else:
+            # Idle state - minimal activity
+            for i in range(len(self.voice_waveform)):
+                self.voice_waveform[i] = max(0, self.voice_waveform[i] - 0.1)
+        
+        # Update audio bars (equalizer effect)
+        for i in range(len(self.audio_bars)):
+            target = random.uniform(0.3, 1.0) if self.current_state in ["listening", "speaking"] else 0
+            self.audio_bars[i] += (target - self.audio_bars[i]) * 0.3
+        
         self._draw_hud()
         
-        # Schedule next frame
-        self.root.after(50, self._animate)
+        # Schedule next frame with configurable FPS
+        self.root.after(self.animation_delay, self._animate)
     
     def _update_particles(self):
         """Update particle positions and create new ones."""
@@ -2031,6 +3657,7 @@ class Dashboard:
             particle['x'] += particle['vx']
             particle['y'] += particle['vy']
             particle['life'] -= 1
+            particle['rotation'] += particle['rotation_speed']
             
             # Wrap around screen
             if particle['x'] < 0:
@@ -2040,12 +3667,18 @@ class Dashboard:
             
             # Reset if dead or out of bounds
             if particle['life'] <= 0 or particle['y'] < -10:
+                particle_type = random.choice(['dot', 'line', 'ring'])
                 particle['x'] = random.randint(0, self.width)
                 particle['y'] = self.height
-                particle['vx'] = random.uniform(-0.5, 0.5)
-                particle['vy'] = random.uniform(-1, -0.3)
-                particle['life'] = random.randint(100, 200)
-                particle['alpha'] = random.uniform(0.3, 0.8)
+                particle['vx'] = random.uniform(-0.8, 0.8)
+                particle['vy'] = random.uniform(-1.2, 0.2)
+                particle['life'] = random.randint(150, 300)
+                particle['max_life'] = particle['life']
+                particle['alpha'] = random.uniform(0.3, 1.0)
+                particle['size'] = random.randint(1, 4)
+                particle['type'] = particle_type
+                particle['rotation'] = random.uniform(0, 360)
+                particle['rotation_speed'] = random.uniform(-2, 2)
     
     def set_state(self, state: str):
         """
@@ -2055,6 +3688,16 @@ class Dashboard:
             state: One of 'idle', 'listening', 'thinking', 'speaking'
         """
         self.current_state = state
+        
+        # Update avatar expression based on state
+        if state == 'listening':
+            self.set_avatar_expression('listening')
+        elif state == 'thinking':
+            self.set_avatar_expression('thinking')
+        elif state == 'speaking':
+            self.set_avatar_expression('speaking')
+        else:
+            self.set_avatar_expression('neutral')
         # Schedule drawing on main thread to avoid tkinter threading issues
         try:
             self.root.after(0, self._draw_hud)
@@ -2354,6 +3997,16 @@ class Dashboard:
         )
         cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
     
+    def _edit_command(self, trigger):
+        """Open command editor with pre-filled data for editing."""
+        # Just open the commands editor - user can find and edit the command
+        self._open_commands_editor()
+    
+    def _edit_qa_pair(self, question):
+        """Open Q&A editor with pre-filled data for editing."""
+        # Just open the Q&A editor - user can find and edit the Q&A pair
+        self._open_qa_editor()
+    
     
     def _enable_open_mic(self):
         """Enable open mic mode permanently."""
@@ -2473,11 +4126,17 @@ class Dashboard:
                     self.logger.info(f"You: {text}")
                     self.set_state("thinking")
                     
+                    # Add to command history
+                    self.add_to_history(text)
+                    
                     try:
                         response = self.jarvis.process_input(text)
                         
                         self.logger.info(f"Jarvis: {response}")
                         self.set_state("speaking")
+                        
+                        # Add notification for command execution
+                        self.add_notification(f"Executed: {text[:30]}", 'info')
                         
                         # Speak the response with interrupt capability
                         self.jarvis._speak_with_interrupt(response)
@@ -2537,3 +4196,240 @@ class Dashboard:
                 self.jarvis.shutdown()
             except Exception as e:
                 self.logger.error(f"Shutdown error: {e}")
+    
+    def _load_settings(self):
+        """Load UI settings from file."""
+        # Default settings
+        self.enable_sound_effects = True
+        self.animation_delay = 50  # 20 FPS
+        self.check_updates_on_startup = True
+        self.auto_download_updates = False
+        self.github_repo = "astroverse4223-lab/JarvisOmega"
+        
+        try:
+            if os.path.exists(self.settings_file):
+                with open(self.settings_file, 'r') as f:
+                    settings = json.load(f)
+                    self.enable_sound_effects = settings.get('enable_sound_effects', True)
+                    self.animation_delay = settings.get('animation_delay', 50)
+                    self.check_updates_on_startup = settings.get('check_updates_on_startup', True)
+                    self.auto_download_updates = settings.get('auto_download_updates', False)
+                    self.github_repo = settings.get('github_repo', 'astroverse4223-lab/JarvisOmega')
+                    self.logger.info("Loaded UI settings from file")
+        except Exception as e:
+            self.logger.warning(f"Failed to load settings: {e}")
+    
+    def _save_settings(self):
+        """Save UI settings to file."""
+        try:
+            settings = {
+                'enable_sound_effects': self.enable_sound_effects,
+                'animation_delay': self.animation_delay,
+                'check_updates_on_startup': self.check_updates_on_startup,
+                'auto_download_updates': self.auto_download_updates,
+                'github_repo': self.github_repo
+            }
+            with open(self.settings_file, 'w') as f:
+                json.dump(settings, f, indent=4)
+            self.logger.info("Saved UI settings to file")
+        except Exception as e:
+            self.logger.error(f"Failed to save settings: {e}")
+    
+    def _check_for_updates_async(self):
+        """Check for updates in background thread."""
+        def check_thread():
+            try:
+                self._check_for_updates()
+            except Exception as e:
+                self.logger.error(f"Update check failed: {e}")
+        
+        threading.Thread(target=check_thread, daemon=True).start()
+    
+    def _check_for_updates(self):
+        """Check GitHub releases for new version."""
+        try:
+            # Read local version
+            version_path = get_resource_path('VERSION')
+            if os.path.exists(version_path):
+                with open(version_path, 'r') as f:
+                    local_version = f.read().strip()
+            else:
+                local_version = '1.0.0'
+            
+            self.logger.info(f"Current version: {local_version}")
+            
+            # GitHub API endpoint for releases
+            api_url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
+            
+            # Make request with timeout
+            response = requests.get(api_url, timeout=10)
+            
+            if response.status_code == 404:
+                self.logger.warning("GitHub repository not found or no releases available")
+                self._show_update_message("No Updates", 
+                    f"Unable to check for updates.\\n\\nMake sure to set your GitHub repo in:\\nself.github_repo = '{self.github_repo}'")
+                return
+            
+            response.raise_for_status()
+            release_data = response.json()
+            
+            # Get latest version
+            latest_version = release_data.get('tag_name', '').lstrip('v')
+            release_url = release_data.get('html_url', '')
+            release_notes = release_data.get('body', 'No release notes available.')
+            
+            self.logger.info(f"Latest version: {latest_version}")
+            
+            # Compare versions
+            if self._is_newer_version(latest_version, local_version):
+                self.logger.info(f"New version available: {latest_version}")
+                self._show_update_dialog(latest_version, local_version, release_url, release_notes)
+            else:
+                self.logger.info("Already on latest version")
+                self._show_update_message("Up to Date", 
+                    f"You're running the latest version!\\n\\nCurrent: v{local_version}\\nLatest: v{latest_version}")
+        
+        except requests.exceptions.Timeout:
+            self.logger.error("Update check timed out")
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Update check network error: {e}")
+        except Exception as e:
+            self.logger.error(f"Update check failed: {e}")
+    
+    def _is_newer_version(self, latest, current):
+        """Compare version strings (semantic versioning)."""
+        try:
+            latest_parts = [int(x) for x in latest.split('.')]
+            current_parts = [int(x) for x in current.split('.')]
+            
+            # Pad with zeros if needed
+            while len(latest_parts) < 3:
+                latest_parts.append(0)
+            while len(current_parts) < 3:
+                current_parts.append(0)
+            
+            return latest_parts > current_parts
+        except:
+            # Fallback to string comparison
+            return latest > current
+    
+    def _show_update_message(self, title, message):
+        """Show simple update message dialog."""
+        try:
+            import tkinter.messagebox as messagebox
+            messagebox.showinfo(title, message)
+        except Exception as e:
+            self.logger.error(f"Failed to show update message: {e}")
+    
+    def _show_update_dialog(self, latest_version, current_version, release_url, release_notes):
+        """Show update available dialog with download option."""
+        try:
+            import webbrowser
+            from tkinter import messagebox
+            
+            if self.auto_download_updates:
+                # Auto-download mode
+                self.logger.info("Auto-downloading update...")
+                self._download_and_install_update(latest_version, release_url)
+            else:
+                # Manual confirmation
+                message = (f"A new version of JARVIS is available!\n\n"
+                          f"Current Version: v{current_version}\n"
+                          f"Latest Version: v{latest_version}\n\n"
+                          f"Release Notes:\n{release_notes[:200]}{'...' if len(release_notes) > 200 else ''}\n\n"
+                          f"Would you like to download and install it now?")
+                
+                result = messagebox.askyesno("Update Available", message)
+                
+                if result:
+                    self._download_and_install_update(latest_version, release_url)
+        except Exception as e:
+            self.logger.error(f"Failed to show update dialog: {e}")
+    
+    def _download_and_install_update(self, version, release_url):
+        """Download and install the update."""
+        import webbrowser
+        from tkinter import messagebox
+        
+        try:
+            # Get release assets
+            api_url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
+            response = requests.get(api_url, timeout=10)
+            response.raise_for_status()
+            release_data = response.json()
+            
+            assets = release_data.get('assets', [])
+            
+            # Find the main executable or installer
+            download_asset = None
+            for asset in assets:
+                name = asset['name'].lower()
+                if name.endswith('.exe') or name.endswith('.msi') or 'installer' in name:
+                    download_asset = asset
+                    break
+            
+            if not download_asset:
+                # No installer found, open releases page
+                self.logger.warning("No installer found in release, opening releases page")
+                webbrowser.open(release_url)
+                messagebox.showinfo("Manual Download Required", 
+                    f"Please download JARVIS v{version} manually from:\n{release_url}")
+                return
+            
+            # Download the update
+            download_url = download_asset['browser_download_url']
+            file_name = download_asset['name']
+            
+            self.logger.info(f"Downloading update: {file_name}")
+            messagebox.showinfo("Downloading Update", 
+                f"Downloading JARVIS v{version}...\nThis may take a moment.")
+            
+            # Download to temp directory
+            import tempfile
+            temp_dir = tempfile.gettempdir()
+            download_path = os.path.join(temp_dir, file_name)
+            
+            response = requests.get(download_url, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            with open(download_path, 'wb') as f:
+                if total_size:
+                    downloaded = 0
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                else:
+                    f.write(response.content)
+            
+            self.logger.info(f"Downloaded to: {download_path}")
+            
+            # Ask user to install
+            result = messagebox.askyesno("Update Downloaded", 
+                f"JARVIS v{version} has been downloaded!\n\n"
+                f"Location: {download_path}\n\n"
+                f"Would you like to run the installer now?\n"
+                f"(JARVIS will close)")
+            
+            if result:
+                # Run the installer and close JARVIS
+                import subprocess
+                subprocess.Popen([download_path], shell=True)
+                self.logger.info("Launching installer and closing JARVIS")
+                self.root.quit()
+            else:
+                messagebox.showinfo("Update Ready", 
+                    f"The installer has been saved to:\n{download_path}\n\n"
+                    f"Run it when you're ready to update.")
+        
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Download failed: {e}")
+            messagebox.showerror("Download Failed", 
+                f"Failed to download update.\n\nOpening releases page instead...")
+            webbrowser.open(release_url)
+        except Exception as e:
+            self.logger.error(f"Update installation failed: {e}")
+            messagebox.showerror("Update Failed", 
+                f"Failed to install update: {e}\n\nPlease download manually from:\n{release_url}")
+            webbrowser.open(release_url)
