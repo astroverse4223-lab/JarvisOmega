@@ -123,6 +123,30 @@ Write-Host ""
 # Get current branch
 $currentBranch = git branch --show-current
 
+# Pull remote changes first (with rebase to keep history clean)
+Write-Host "Checking for remote changes..." -ForegroundColor Yellow
+git fetch origin $currentBranch
+
+$localCommit = git rev-parse HEAD
+$remoteCommit = git rev-parse "origin/$currentBranch" 2>$null
+
+if ($remoteCommit -and $localCommit -ne $remoteCommit) {
+    Write-Host "Remote changes detected, pulling with rebase..." -ForegroundColor Yellow
+    git pull --rebase origin $currentBranch
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "ERROR: Pull failed - possible merge conflicts" -ForegroundColor Red
+        Write-Host "Resolve conflicts manually, then run:" -ForegroundColor Yellow
+        Write-Host "  git rebase --continue" -ForegroundColor Cyan
+        Write-Host "  .\git-push.ps1 -CommitMessage '$CommitMessage'" -ForegroundColor Cyan
+        Write-Host ""
+        exit 1
+    }
+    Write-Host "Successfully pulled and rebased remote changes" -ForegroundColor Green
+    Write-Host ""
+}
+
 # Push
 Write-Host "Pushing to $currentBranch..." -ForegroundColor Yellow
 
