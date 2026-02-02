@@ -64,18 +64,35 @@ def build_executable():
     
     # Check if virtual environment is active
     if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-        print("⚠️  Warning: Virtual environment not detected!")
+        print("WARNING: Virtual environment not detected!")
         print("   Recommended: Activate .venv first")
         print("   Continuing build...")
         print()
+    
+    # Find Python DLL
+    python_dll = None
+    if hasattr(sys, 'base_prefix'):
+        python_dll = Path(sys.base_prefix) / f'python{sys.version_info.major}{sys.version_info.minor}.dll'
+    if not python_dll or not python_dll.exists():
+        python_dll = Path(sys.executable).parent / f'python{sys.version_info.major}{sys.version_info.minor}.dll'
+    
+    if python_dll.exists():
+        print(f"Python DLL found: {python_dll}")
+    else:
+        print(f"WARNING: Python DLL not found!")
+        python_dll = None
     
     # PyInstaller options
     options = [
         'main.py',  # Entry point
         '--name=Jarvis',  # Executable name
         '--onedir',  # Create folder with all dependencies (more reliable)
-        '--noconsole',  # No console window (use --console for debugging)
+        '--noconsole',  # No console window for clean GUI experience
         '--icon=NONE',  # Add icon path if available
+        '--noupx',  # Don't use UPX compression (can cause DLL issues)
+        
+        # Add Python DLL explicitly
+        f'--add-binary={python_dll}{os.pathsep}.' if python_dll else '',
         
         # Include data files using absolute paths
         f'--add-data={project_dir / "config.yaml"}{os.pathsep}.',
@@ -118,9 +135,21 @@ def build_executable():
         '--collect-all=ui',
         '--collect-all=core',
         '--collect-all=skills',
+        '--collect-all=ctranslate2',
+        '--collect-all=sounddevice',
+        '--collect-all=soundfile',
         
         # Collect setuptools vendored packages data
         '--collect-data=setuptools',
+        '--collect-submodules=setuptools',
+        '--collect-submodules=pkg_resources',
+        
+        # Copy metadata for packages that need it
+        '--copy-metadata=tqdm',
+        '--copy-metadata=requests',
+        '--copy-metadata=packaging',
+        '--copy-metadata=filelock',
+        '--copy-metadata=setuptools',
         
         # Exclude unnecessary modules to reduce size
         '--exclude-module=matplotlib',
@@ -134,8 +163,8 @@ def build_executable():
         # '--clean',
         '--noconfirm',  # Don't ask for confirmation
         
-        # Output directory
-        '--distpath=dist',
+        # Output directory - use unique name to avoid locking issues
+        '--distpath=dist_temp',
         '--workpath=build',
         '--specpath=build',
     ]
@@ -148,32 +177,29 @@ def build_executable():
         # Run PyInstaller
         PyInstaller.__main__.run(options)
         
-        # Manual COLLECT step - copy from build to dist
-        # This avoids PyInstaller's directory removal issues
-        dist_dir = project_dir / 'dist' / 'Jarvis_final'
-        build_dir = project_dir / 'build' / 'Jarvis'
+        # Manual COLLECT step - copy from dist_temp to final dist location
+        dist_temp = project_dir / 'dist_temp' / 'Jarvis'
+        dist_final = project_dir / 'dist' / 'Jarvis_final'
         
-        if build_dir.exists():
+        if dist_temp.exists():
             print()
-            print("Manually copying build output to dist folder...")
+            print("Copying build output to final location...")
             
-            # Remove old dist if exists
-            if dist_dir.exists():
+            # Remove old final dist if exists
+            if dist_final.exists():
                 try:
-                    shutil.rmtree(dist_dir, ignore_errors=True)
+                    shutil.rmtree(dist_final, ignore_errors=True)
                 except:
                     pass
             
-            # Create dist directory and copy everything
-            dist_dir.mkdir(parents=True, exist_ok=True)
-            for item in build_dir.iterdir():
-                dest = dist_dir / item.name
-                if item.is_file():
-                    shutil.copy2(item, dest)
-                else:
-                    if dest.exists():
-                        shutil.rmtree(dest, ignore_errors=True)
-                    shutil.copytree(item, dest)
+            # Copy to final location
+            shutil.copytree(dist_temp, dist_final)
+            
+            # Clean up temp
+            try:
+                shutil.rmtree(project_dir / 'dist_temp', ignore_errors=True)
+            except:
+                pass
             
             print()
             print("=" * 60)
@@ -181,6 +207,9 @@ def build_executable():
             print("=" * 60)
             print()
             print(f"Executable location: {dist_dir / 'Jarvis.exe'}")
+            print()
+            print("Important Notes:")
+            print("   1. The 'Jarvis_final' folfinal / 'Jarvis.exe'}")
             print()
             print("Important Notes:")
             print("   1. The 'Jarvis_final' folder in 'dist/' contains everything needed")
@@ -194,8 +223,8 @@ def build_executable():
             print(f"   cd dist\\Jarvis_final")
             print(f"   .\\Jarvis.exe")
             print()
-        else:
-            raise Exception("Build directory not found - PyInstaller may have failed")
+            print("To create release ZIP:")
+            print("   python package_release.pyirectory not found - PyInstaller may have failed")
         
     except Exception as e:
         print()
