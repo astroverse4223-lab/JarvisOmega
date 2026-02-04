@@ -1110,6 +1110,57 @@ commands:
     description: "Makes a Python script using AI"
     confirm: false
   
+  - name: "Write Me Code"
+    trigger: "write me code"
+    action: "python"
+    command: "scripts/code_viewer.py"
+    description: "Generates code and shows in window"
+    confirm: false
+  
+  - name: "Generate Code"
+    trigger: "generate code"
+    action: "python"
+    command: "scripts/code_viewer.py"
+    description: "Generates code and shows in window"
+    confirm: false
+  
+  - name: "Show Me Code"
+    trigger: "show me code"
+    action: "python"
+    command: "scripts/code_viewer.py"
+    description: "Generates code and shows in window"
+    confirm: false
+  
+  # === IMAGE GENERATION ===
+  
+  - name: "Generate Image"
+    trigger: "generate image"
+    action: "python"
+    command: "scripts/image_generator.py"
+    description: "Generates an AI image and shows in window"
+    confirm: false
+  
+  - name: "Create Image"
+    trigger: "create image"
+    action: "python"
+    command: "scripts/image_generator.py"
+    description: "Creates an AI image and shows in window"
+    confirm: false
+  
+  - name: "Make Me An Image"
+    trigger: "make me an image"
+    action: "python"
+    command: "scripts/image_generator.py"
+    description: "Makes an AI image and shows in window"
+    confirm: false
+  
+  - name: "Show Me An Image"
+    trigger: "show me an image"
+    action: "python"
+    command: "scripts/image_generator.py"
+    description: "Shows an AI generated image in window"
+    confirm: false
+  
   - name: "Change Theme Teal"
     trigger: "change theme to teal"
     action: "theme"

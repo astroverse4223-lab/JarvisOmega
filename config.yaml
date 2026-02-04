@@ -20,7 +20,7 @@ stt:
     mode: "wake_word"  # Always listening in open mic mode
     wake_word: "jarvis"
     key: "space"  # Ignored in open mic mode
-    interrupt_key: "ctrl"  # Press Ctrl to interrupt Jarvis while speaking
+    interrupt_key: "ctrl"  # Press Ctrl (left or right) to interrupt Jarvis while speaking
   
   audio:
     sample_rate: 16000

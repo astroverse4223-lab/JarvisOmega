@@ -241,7 +241,7 @@ class CustomSkill(BaseSkill):
                 return f"Confirmation required: {matching_cmd['description']}"
             
             # Special handling for script generator - extract description after trigger
-            if 'script_generator.py' in matching_cmd.get('command', ''):
+            if 'script_generator.py' in matching_cmd.get('command', '') or 'code_viewer.py' in matching_cmd.get('command', '') or 'image_generator.py' in matching_cmd.get('command', ''):
                 trigger = matching_cmd['trigger'].lower().strip()
                 # Extract text after the trigger phrase
                 import re
@@ -254,9 +254,17 @@ class CustomSkill(BaseSkill):
                         # Pass the description as arguments
                         return self._execute_command(matching_cmd, extra_args=description)
                     else:
-                        return "Please tell me what kind of script you want. For example: 'write me a script that organizes files by date'"
+                        if 'image_generator.py' in matching_cmd.get('command', ''):
+                            prompt = "Please tell me what image you want. For example: 'generate image of a sunset over mountains'"
+                        else:
+                            prompt = "Please tell me what kind of code you want. For example: 'write me code that organizes files by date'"
+                        return prompt
                 else:
-                    return "Please tell me what kind of script you want. For example: 'write me a script that organizes files by date'"
+                    if 'image_generator.py' in matching_cmd.get('command', ''):
+                        prompt = "Please tell me what image you want. For example: 'generate image of a sunset over mountains'"
+                    else:
+                        prompt = "Please tell me what kind of code you want. For example: 'write me code that organizes files by date'"
+                    return prompt
             
             # Execute immediately
             return self._execute_command(matching_cmd)

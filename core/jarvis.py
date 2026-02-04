@@ -109,14 +109,42 @@ class Jarvis:
         
         # Monitor for interrupt
         interrupt_key = self.stt.interrupt_key
-        while speak_thread.is_alive() and self.tts.is_speaking:
+        
+        check_count = 0
+        while speak_thread.is_alive():
             # Check if interrupt key pressed
-            if keyboard.is_pressed(interrupt_key):
+            # Handle special key names for keyboard library
+            key_pressed = False
+            try:
+                if interrupt_key.lower() == 'ctrl':
+                    # Check all variations like in the test
+                    key_pressed = (keyboard.is_pressed('ctrl') or 
+                                 keyboard.is_pressed('left ctrl') or 
+                                 keyboard.is_pressed('right ctrl') or
+                                 keyboard.is_pressed('control') or
+                                 keyboard.is_pressed('left control') or
+                                 keyboard.is_pressed('right control'))
+                elif interrupt_key.lower() == 'alt':
+                    key_pressed = keyboard.is_pressed('alt') or keyboard.is_pressed('left alt') or keyboard.is_pressed('right alt')
+                elif interrupt_key.lower() == 'shift':
+                    key_pressed = keyboard.is_pressed('shift') or keyboard.is_pressed('left shift') or keyboard.is_pressed('right shift')
+                else:
+                    key_pressed = keyboard.is_pressed(interrupt_key)
+            except Exception as e:
+                self.logger.error(f"Keyboard check error: {e}")
+            
+            # Periodic monitoring check
+            check_count += 1
+            
+            if key_pressed:
                 self.logger.info(f"Interrupt detected ({interrupt_key} pressed)")
                 self.tts.stop()
                 
+                # Wait for the speak thread to finish
+                speak_thread.join(timeout=1.0)
+                
                 # Wait a moment for key release
-                time.sleep(0.3)
+                time.sleep(0.2)
                 
                 # Immediately start listening again
                 if self.dashboard:
@@ -124,9 +152,9 @@ class Jarvis:
                 self.listen_and_respond()
                 return
             
-            time.sleep(0.1)
+            time.sleep(0.05)  # Check more frequently (20 times per second)
         
-        # Wait for speech to complete
+        # Wait for speech to complete if not interrupted
         speak_thread.join(timeout=1)
     
     def _license_validation_loop(self):
@@ -473,7 +501,7 @@ class Jarvis:
             wake_word = self.config['stt']['activation']['wake_word']
             print(f"Say '{wake_word}' to activate\n")
         
-        self.tts.speak("Jarvis Omega online. Systems operational.")
+        self.tts.speak("Jarvis Omega online. Systems operational.", wait=False)
         
         # Start background license validation
         self._start_license_validation_thread()
@@ -506,8 +534,8 @@ class Jarvis:
         for skill in self.skills.skills:
             skill.dashboard = self.dashboard
         
-        # Startup message
-        self.tts.speak("Jarvis Omega online. Systems operational.")
+        # Startup message (non-blocking so UI appears immediately)
+        self.tts.speak("Jarvis Omega online. Systems operational.", wait=False)
         
         # Start background license validation
         self._start_license_validation_thread()

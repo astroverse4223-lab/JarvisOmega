@@ -107,25 +107,48 @@ class VoiceSynthesizer:
         try:
             if hasattr(self, 'use_pyttsx3') and self.use_pyttsx3:
                 # pyttsx3 fallback
+                self.logger.info("Using pyttsx3")
                 self.speaker.say(text)
-                self.speaker.runAndWait()
+                if wait:
+                    self.speaker.runAndWait()
             else:
                 # Windows SAPI - async mode (1) allows interruption
-                # Use async flag to enable stopping mid-speech
+                # Initialize COM for this thread
                 import pythoncom
                 pythoncom.CoInitialize()
-                self.speaker.Speak(text, 1)  # 1 = async mode
                 
-                # Wait for speech to complete or be interrupted
-                while self.speaker.Status.RunningState == 2:  # 2 = speaking
-                    if self.should_stop:
-                        self.speaker.Speak("", 3)  # 3 = purge and stop
-                        self.logger.info("Speech interrupted")
-                        break
+                try:
+                    # Use flag 1 for async (SVSFlagsAsync)
+                    self.speaker.Speak(text, 1)
+                    
+                    # Give SAPI a moment to start speaking
                     time.sleep(0.1)
+                    
+                    if wait:
+                        loop_count = 0
+                        max_loops = 1000  # Max 50 seconds (1000 * 0.05s)
+                        # Wait for speech to complete or be interrupted
+                        # Check while NOT done (RunningState 0 = done)
+                        while self.speaker.Status.RunningState != 0 and loop_count < max_loops:  # Keep going while speaking
+                            loop_count += 1
+                            
+                            if self.should_stop:
+                                # Purge speech queue - must be done in same thread
+                                self.speaker.Speak("", 2 | 1)  # SVSFPurgeBeforeSpeak | SVSFlagsAsync
+                                self.logger.info("Speech interrupted")
+                                break
+                            time.sleep(0.05)  # Check every 50ms
+                        
+                        if loop_count >= max_loops:
+                            self.logger.warning(f"Speech timeout after {loop_count} loops - force stopping")
+                            self.speaker.Speak("", 2 | 1)  # Force stop
+                    else:
+                        self.logger.info("Not waiting (async mode)")
+                finally:
+                    pythoncom.CoUninitialize()
             
             self.is_speaking = False
-            self.logger.debug("Speech completed")
+            self.logger.info("Speech completed")
             
         except Exception as e:
             self.is_speaking = False
@@ -133,18 +156,14 @@ class VoiceSynthesizer:
     
     
     def stop(self):
-        """Stop current speech immediately."""
+        """Stop current speech immediately by setting flag."""
         try:
             self.should_stop = True
-            if hasattr(self, 'use_pyttsx3') and self.use_pyttsx3:
-                self.speaker.stop()
-            else:
-                # SAPI: purge and stop all speech
-                self.speaker.Speak("", 3)  # 3 = SVSFPurgeBeforeSpeak | SVSFlagsAsync
             self.is_speaking = False
-            self.logger.info("Speech stopped")
+            # The actual stopping happens in the speak() thread
+            # which has the proper COM context
         except Exception as e:
-            self.logger.error(f"Failed to stop speech: {e}")
+            self.logger.error(f"Failed to set stop flag: {e}")
     
     def list_voices(self) -> list:
         """

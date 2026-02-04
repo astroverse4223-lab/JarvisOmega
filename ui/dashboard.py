@@ -1459,16 +1459,16 @@ class Dashboard:
         """Exit the application with goodbye message."""
         self.stop_listening = True
         
-        # Speak goodbye message and wait for it to complete
+        # Speak goodbye message without blocking shutdown
         try:
             import time
             goodbye_text = "Goodbye sir. System shutting down."
             
-            # Speak and wait
-            self.jarvis.tts.speak(goodbye_text, wait=True)
+            # Speak in background (don't block shutdown)
+            self.jarvis.tts.speak(goodbye_text, wait=False)
             
-            # Additional safety wait to ensure audio buffer is fully played
-            time.sleep(1.0)
+            # Wait for speech to complete (about 3-4 seconds for this message)
+            time.sleep(3.5)
             
             self.logger.info("Goodbye message completed")
         except Exception as e:
@@ -1564,30 +1564,49 @@ class Dashboard:
         
         self.settings_window = tk.Toplevel(self.root)
         self.settings_window.title("J.A.R.V.I.S. Settings")
-        self.settings_window.geometry("600x900")
-        self.settings_window.configure(bg='#1a1a1a')
+        self.settings_window.geometry("700x950")
+        self.settings_window.configure(bg='#0a0e1a')
         
         # Center on screen
         sw = self.settings_window.winfo_screenwidth()
         sh = self.settings_window.winfo_screenheight()
-        x = (sw - 600) // 2
-        y = (sh - 900) // 2
-        self.settings_window.geometry(f"600x900+{x}+{y}")
+        x = (sw - 700) // 2
+        y = (sh - 950) // 2
+        self.settings_window.geometry(f"700x950+{x}+{y}")
         
-        # Title
-        title = tk.Label(
-            self.settings_window,
-            text="⚙ SETTINGS",
-            font=('Arial', 16, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        )
-        title.pack(pady=20)
+        # Modern header with gradient effect
+        header_frame = tk.Frame(self.settings_window, bg='#0d1420', height=80)
+        header_frame.pack(fill='x')
+        header_frame.pack_propagate(False)
+        
+        # Title with icon
+        title_container = tk.Frame(header_frame, bg='#0d1420')
+        title_container.place(relx=0.5, rely=0.5, anchor='center')
+        
+        tk.Label(
+            title_container,
+            text="⚙",
+            font=('Segoe UI Emoji', 28),
+            fg='#00ffff',
+            bg='#0d1420'
+        ).pack(side='left', padx=(0, 10))
+        
+        tk.Label(
+            title_container,
+            text="JARVIS SETTINGS",
+            font=('Segoe UI', 18, 'bold'),
+            fg='#00ffff',
+            bg='#0d1420'
+        ).pack(side='left')
+        
+        # Divider line
+        tk.Frame(self.settings_window, bg='#00d4cc', height=2).pack(fill='x')
         
         # Create scrollable container
-        main_canvas = tk.Canvas(self.settings_window, bg='#1a1a1a', highlightthickness=0)
-        scrollbar = tk.Scrollbar(self.settings_window, orient='vertical', command=main_canvas.yview)
-        scrollable_frame = tk.Frame(main_canvas, bg='#1a1a1a')
+        main_canvas = tk.Canvas(self.settings_window, bg='#0a0e1a', highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.settings_window, orient='vertical', command=main_canvas.yview, 
+                                bg='#1a2332', troughcolor='#0a0e1a', activebackground='#00d4cc')
+        scrollable_frame = tk.Frame(main_canvas, bg='#0a0e1a')
         
         scrollable_frame.bind(
             "<Configure>",
@@ -1610,20 +1629,64 @@ class Dashboard:
         
         self.settings_window.protocol("WM_DELETE_WINDOW", on_close)
         
-        main_canvas.pack(side='left', fill='both', expand=True)
+        main_canvas.pack(side='left', fill='both', expand=True, padx=5)
         scrollbar.pack(side='right', fill='y')
         
-        # === MIC MODE SETTINGS ===
-        mic_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        mic_frame.pack(fill='x', padx=20, pady=10)
+        # Helper function to create styled section headers
+        def create_section_header(parent, icon, title, description):
+            section_frame = tk.Frame(parent, bg='#0f1826', bd=0)
+            section_frame.pack(fill='x', padx=15, pady=(15, 8))
+            
+            # Header container
+            header_container = tk.Frame(section_frame, bg='#0f1826')
+            header_container.pack(fill='x', padx=15, pady=12)
+            
+            # Icon and title
+            tk.Label(
+                header_container,
+                text=icon,
+                font=('Segoe UI Emoji', 16),
+                fg='#00ffff',
+                bg='#0f1826'
+            ).pack(side='left', padx=(0, 10))
+            
+            title_frame = tk.Frame(header_container, bg='#0f1826')
+            title_frame.pack(side='left', fill='x', expand=True)
+            
+            tk.Label(
+                title_frame,
+                text=title,
+                font=('Segoe UI', 12, 'bold'),
+                fg='#ffffff',
+                bg='#0f1826',
+                anchor='w'
+            ).pack(anchor='w')
+            
+            if description:
+                tk.Label(
+                    title_frame,
+                    text=description,
+                    font=('Segoe UI', 8),
+                    fg='#7a8a9a',
+                    bg='#0f1826',
+                    anchor='w'
+                ).pack(anchor='w', pady=(2, 0))
+            
+            # Bottom accent line
+            tk.Frame(section_frame, bg='#00d4cc', height=1).pack(fill='x', padx=15)
+            
+            return section_frame
         
-        tk.Label(
-            mic_frame,
-            text="🎤 Microphone Mode:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w', pady=(0, 5))
+        # Helper function to create option containers
+        def create_option_container(parent):
+            container = tk.Frame(parent, bg='#0a0e1a')
+            container.pack(fill='x', padx=30, pady=6)
+            return container
+        
+        # === MIC MODE SETTINGS ===
+        create_section_header(scrollable_frame, "🎤", "MICROPHONE", "Control how JARVIS listens to you")
+        
+        mic_container = create_option_container(scrollable_frame)
         
         mic_mode_var = tk.StringVar(value="Open Mic" if self.open_mic_mode else "Push-to-Talk")
         
@@ -1635,121 +1698,155 @@ class Dashboard:
                 if self.open_mic_mode:
                     self._toggle_open_mic()
         
-        tk.Radiobutton(
-            mic_frame,
-            text="Open Mic (Always Listening)",
-            variable=mic_mode_var,
-            value="Open Mic",
-            font=('Courier', 9),
-            fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
-            command=toggle_mic_mode
-        ).pack(anchor='w', padx=10)
+        # Styled radio buttons
+        for mode, desc in [("Open Mic", "Always listening for wake word"), 
+                           ("Push-to-Talk", "Hold SPACE to speak")]:
+            radio_frame = tk.Frame(mic_container, bg='#0a0e1a')
+            radio_frame.pack(fill='x', pady=4)
+            
+            tk.Radiobutton(
+                radio_frame,
+                text=mode,
+                variable=mic_mode_var,
+                value=mode,
+                font=('Segoe UI', 10, 'bold'),
+                fg='#e0e6ed',
+                bg='#0a0e1a',
+                selectcolor='#1a2332',
+                activebackground='#0a0e1a',
+                activeforeground='#00ffff',
+                command=toggle_mic_mode
+            ).pack(anchor='w', side='left')
+            
+            tk.Label(
+                radio_frame,
+                text=f"  •  {desc}",
+                font=('Segoe UI', 8),
+                fg='#7a8a9a',
+                bg='#0a0e1a'
+            ).pack(anchor='w', side='left')
         
-        tk.Radiobutton(
-            mic_frame,
-            text="Push-to-Talk (Space Bar)",
-            variable=mic_mode_var,
-            value="Push-to-Talk",
-            font=('Courier', 9),
-            fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
-            command=toggle_mic_mode
-        ).pack(anchor='w', padx=10)
+        # === INTERRUPT KEY ===
+        create_section_header(scrollable_frame, "⏸", "INTERRUPT CONTROL", "Stop JARVIS while speaking")
         
-        # === INTERRUPT KEY SETTINGS ===
-        interrupt_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        interrupt_frame.pack(fill='x', padx=20, pady=10)
-        
-        tk.Label(
-            interrupt_frame,
-            text="⏸ Interrupt Key:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w', pady=(0, 5))
+        interrupt_container = create_option_container(scrollable_frame)
         
         current_interrupt_key = getattr(self.jarvis.stt, 'interrupt_key', 'esc')
         
+        key_info_frame = tk.Frame(interrupt_container, bg='#1a2332', bd=0)
+        key_info_frame.pack(fill='x', pady=4, ipady=8, ipadx=12)
+        
         tk.Label(
-            interrupt_frame,
-            text=f"Current: {current_interrupt_key.upper()}",
-            font=('Courier', 9),
+            key_info_frame,
+            text="Current Key:",
+            font=('Segoe UI', 9),
+            fg='#7a8a9a',
+            bg='#1a2332'
+        ).pack(side='left', padx=(0, 10))
+        
+        tk.Label(
+            key_info_frame,
+            text=current_interrupt_key.upper(),
+            font=('Consolas', 11, 'bold'),
             fg='#ffaa00',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10)
+            bg='#1a2332'
+        ).pack(side='left')
+        
+        # === UI APPEARANCE ===
+        create_section_header(scrollable_frame, "🎨", "APPEARANCE", "Customize the look and feel")
+        
+        ui_container = create_option_container(scrollable_frame)
+        
+        # Theme Selection (moved up for prominence)
+        theme_label_frame = tk.Frame(ui_container, bg='#0a0e1a')
+        theme_label_frame.pack(fill='x', pady=(0, 6))
         
         tk.Label(
-            interrupt_frame,
-            text="Press this key to stop JARVIS while speaking",
-            font=('Courier', 8),
-            fg='#888',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10)
+            theme_label_frame,
+            text="Color Theme",
+            font=('Segoe UI', 10, 'bold'),
+            fg='#ffffff',
+            bg='#0a0e1a'
+        ).pack(anchor='w')
         
-        # === UI SETTINGS ===
-        ui_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        ui_frame.pack(fill='x', padx=20, pady=10)
+        theme_var = tk.StringVar(value=self.themes[self.current_theme])
+        theme_buttons_frame = tk.Frame(ui_container, bg='#0a0e1a')
+        theme_buttons_frame.pack(fill='x', pady=4)
         
+        for theme_key, theme_name in self.themes.items():
+            theme_btn_container = tk.Frame(theme_buttons_frame, bg='#1a2332' if theme_name == theme_var.get() else '#0a0e1a', bd=1, relief='solid')
+            theme_btn_container.pack(fill='x', pady=2)
+            
+            tk.Radiobutton(
+                theme_btn_container,
+                text=theme_name,
+                variable=theme_var,
+                value=theme_name,
+                font=('Segoe UI', 9),
+                fg='#00ffff' if theme_name == theme_var.get() else '#e0e6ed',
+                bg='#1a2332' if theme_name == theme_var.get() else '#0a0e1a',
+                selectcolor='#1a2332',
+                activebackground='#1a2332',
+                activeforeground='#00ffff',
+                command=lambda k=theme_key: self._apply_theme_from_settings(k)
+            ).pack(anchor='w', padx=8, pady=4)
+        
+        # Opacity
         tk.Label(
-            ui_frame,
-            text="🎨 UI Settings:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w', pady=(0, 5))
-        
-        # Window transparency (if supported)
-        tk.Label(
-            ui_frame,
-            text="Window Opacity:",
-            font=('Courier', 9),
-            fg='#e0e6ed',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10)
+            ui_container,
+            text="Window Opacity",
+            font=('Segoe UI', 10, 'bold'),
+            fg='#ffffff',
+            bg='#0a0e1a'
+        ).pack(anchor='w', pady=(12, 4))
         
         def update_opacity(val):
             try:
                 opacity = float(val) / 100
                 self.root.attributes('-alpha', opacity)
                 self.ui_opacity = int(float(val))
+                opacity_label.config(text=f"{int(float(val))}%")
                 self._save_settings()
             except:
                 pass
         
+        opacity_frame = tk.Frame(ui_container, bg='#0a0e1a')
+        opacity_frame.pack(fill='x', pady=4)
+        
         opacity_scale = tk.Scale(
-            ui_frame,
+            opacity_frame,
             from_=50,
             to=100,
             orient='horizontal',
-            bg='#2a2a2a',
+            bg='#1a2332',
             fg='#00d4cc',
             highlightthickness=0,
-            command=update_opacity
+            troughcolor='#0f1826',
+            activebackground='#00ffff',
+            command=update_opacity,
+            showvalue=0
         )
         opacity_scale.set(getattr(self, 'ui_opacity', 100))
-        opacity_scale.pack(fill='x', padx=10)
+        opacity_scale.pack(side='left', fill='x', expand=True, padx=(0, 10))
         
-        tk.Label(
-            ui_frame,
-            text="(50% = Transparent, 100% = Solid)",
-            font=('Courier', 8),
-            fg='#888',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10)
+        opacity_label = tk.Label(
+            opacity_frame,
+            text=f"{getattr(self, 'ui_opacity', 100)}%",
+            font=('Consolas', 10, 'bold'),
+            fg='#00ffff',
+            bg='#0a0e1a',
+            width=6
+        )
+        opacity_label.pack(side='right')
         
         # Animation Speed
         tk.Label(
-            ui_frame,
-            text="Animation Speed:",
-            font=('Courier', 9),
-            fg='#e0e6ed',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10, pady=(10, 0))
+            ui_container,
+            text="Animation Speed",
+            font=('Segoe UI', 10, 'bold'),
+            fg='#ffffff',
+            bg='#0a0e1a'
+        ).pack(anchor='w', pady=(12, 4))
         
         def change_animation_speed():
             speed = animation_speed_var.get()
@@ -1772,62 +1869,49 @@ class Dashboard:
         
         animation_speed_var = tk.StringVar(value=default_speed)
         
-        tk.Radiobutton(
-            ui_frame,
-            text="Slow (Cinematic)",
-            variable=animation_speed_var,
-            value="Slow",
-            font=('Courier', 8),
-            fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            command=change_animation_speed
-        ).pack(anchor='w', padx=20)
+        speed_buttons_frame = tk.Frame(ui_container, bg='#0a0e1a')
+        speed_buttons_frame.pack(fill='x', pady=4)
         
-        tk.Radiobutton(
-            ui_frame,
-            text="Normal (Default)",
-            variable=animation_speed_var,
-            value="Normal",
-            font=('Courier', 8),
-            fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            command=change_animation_speed
-        ).pack(anchor='w', padx=20)
+        for speed, desc in [("Slow", "Cinematic"), ("Normal", "Balanced"), ("Fast", "Performance")]:
+            speed_frame = tk.Frame(speed_buttons_frame, bg='#0a0e1a')
+            speed_frame.pack(fill='x', pady=2)
+            
+            tk.Radiobutton(
+                speed_frame,
+                text=f"{speed}  •  {desc}",
+                variable=animation_speed_var,
+                value=speed,
+                font=('Segoe UI', 9),
+                fg='#e0e6ed',
+                bg='#0a0e1a',
+                selectcolor='#1a2332',
+                activebackground='#0a0e1a',
+                activeforeground='#00ffff',
+                command=change_animation_speed
+            ).pack(anchor='w')
         
-        tk.Radiobutton(
-            ui_frame,
-            text="Fast (Performance)",
-            variable=animation_speed_var,
-            value="Fast",
-            font=('Courier', 8),
-            fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            command=change_animation_speed
-        ).pack(anchor='w', padx=20)
+        # === VOICE SETTINGS ===
+        create_section_header(scrollable_frame, "🗣", "VOICE", "Configure JARVIS voice and speech")
         
-        # === VOICE SELECTION ===
-        voice_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        voice_frame.pack(fill='x', padx=20, pady=10)
-        
-        tk.Label(
-            voice_frame,
-            text="Voice Selection:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w', pady=(0, 5))
+        voice_container = create_option_container(scrollable_frame)
         
         # Get available voices
         try:
             available_voices = self.jarvis.tts.list_voices()
             
+            tk.Label(
+                voice_container,
+                text="Available Voices",
+                font=('Segoe UI', 10, 'bold'),
+                fg='#ffffff',
+                bg='#0a0e1a'
+            ).pack(anchor='w', pady=(0, 6))
+            
             # Create scrollable frame for voices
-            voice_canvas = tk.Canvas(voice_frame, bg='#2a2a2a', height=120, highlightthickness=1, highlightbackground='#00d4cc')
-            voice_scrollbar = tk.Scrollbar(voice_frame, orient='vertical', command=voice_canvas.yview)
-            voice_list_frame = tk.Frame(voice_canvas, bg='#2a2a2a')
+            voice_canvas = tk.Canvas(voice_container, bg='#1a2332', height=130, highlightthickness=1, highlightbackground='#00d4cc')
+            voice_scrollbar = tk.Scrollbar(voice_container, orient='vertical', command=voice_canvas.yview,
+                                          bg='#1a2332', troughcolor='#0a0e1a', activebackground='#00d4cc')
+            voice_list_frame = tk.Frame(voice_canvas, bg='#1a2332')
             
             voice_list_frame.bind(
                 "<Configure>",
@@ -1875,50 +1959,50 @@ class Dashboard:
                     text=name,
                     variable=voice_var,
                     value=idx,
-                    font=('Courier', 9),
+                    font=('Segoe UI', 9),
                     fg='#e0e6ed',
-                    bg='#2a2a2a',
-                    selectcolor='#1a1a1a',
-                    activebackground='#2a2a2a',
+                    bg='#1a2332',
+                    selectcolor='#0f1826',
+                    activebackground='#1a2332',
                     activeforeground='#00ffff',
                     command=lambda i=idx: change_voice(i)
                 )
-                rb.pack(anchor='w', padx=10, pady=2)
+                rb.pack(anchor='w', padx=12, pady=3)
                 
         except Exception as e:
             tk.Label(
-                voice_frame,
+                voice_container,
                 text=f"Voice selection unavailable: {e}",
-                font=('Courier', 8),
+                font=('Segoe UI', 8),
                 fg='#ff6666',
-                bg='#1a1a1a'
+                bg='#0a0e1a'
             ).pack(anchor='w')
         
-        # === GET MORE VOICES ===
-        get_voices_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        get_voices_frame.pack(fill='x', padx=20, pady=5)
+        # Voice info box
+        info_box = tk.Frame(voice_container, bg='#1a2332', bd=1, relief='solid')
+        info_box.pack(fill='x', pady=(10, 0), ipady=8, ipadx=12)
         
         tk.Label(
-            get_voices_frame,
-            text="💡 Want JARVIS Movie Voice?",
-            font=('Courier', 9, 'bold'),
+            info_box,
+            text="💡 Get Premium Voices",
+            font=('Segoe UI', 9, 'bold'),
             fg='#ffaa00',
-            bg='#1a1a1a'
+            bg='#1a2332'
         ).pack(anchor='w')
         
-        info_text = "Install premium voices like:\n• Ivona Brian (British, sounds like movie JARVIS)\n• CereProc voices (high quality)\n• Microsoft David Desktop (free, British)"
+        info_text = "Install voices like Ivona Brian or CereProc for\nmore realistic, movie-quality JARVIS sound"
         tk.Label(
-            get_voices_frame,
+            info_box,
             text=info_text,
-            font=('Courier', 8),
+            font=('Segoe UI', 8),
             fg='#aaaaaa',
-            bg='#1a1a1a',
+            bg='#1a2332',
             justify='left'
-        ).pack(anchor='w', padx=10)
+        ).pack(anchor='w', pady=(4, 0))
         
         # Buttons for getting more voices
-        btn_frame = tk.Frame(get_voices_frame, bg='#1a1a1a')
-        btn_frame.pack(fill='x', pady=5)
+        btn_frame = tk.Frame(info_box, bg='#1a2332')
+        btn_frame.pack(fill='x', pady=(6, 0))
         
         def open_windows_speech():
             """Open Windows Speech settings."""
@@ -1955,39 +2039,38 @@ class Dashboard:
         
         tk.Button(
             btn_frame,
-            text="🔧 Windows Speech Settings",
+            text="🔧 Speech Settings",
             command=open_windows_speech,
-            bg='#2a2a2a',
-            fg='#00d4cc',
-            font=('Courier', 8, 'bold'),
+            bg='#00d4cc',
+            fg='#000000',
+            font=('Segoe UI', 8, 'bold'),
             relief='flat',
-            padx=8,
-            pady=3
+            padx=10,
+            pady=4,
+            cursor='hand2'
         ).pack(side='left', padx=(0, 5))
         
         tk.Button(
             btn_frame,
-            text="🛒 Get Premium Voices",
+            text="🛒 Buy Voices",
             command=open_ivona_info,
-            bg='#2a2a2a',
-            fg='#ffaa00',
-            font=('Courier', 8, 'bold'),
+            bg='#ffaa00',
+            fg='#000000',
+            font=('Segoe UI', 8, 'bold'),
             relief='flat',
-            padx=8,
-            pady=3
+            padx=10,
+            pady=4,
+            cursor='hand2'
         ).pack(side='left')
         
         # === VOICE SPEED ===
-        speed_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        speed_frame.pack(fill='x', padx=20, pady=10)
-        
         tk.Label(
-            speed_frame,
-            text="Voice Speed:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w')
+            voice_container,
+            text="Voice Speed",
+            font=('Segoe UI', 10, 'bold'),
+            fg='#ffffff',
+            bg='#0a0e1a'
+        ).pack(anchor='w', pady=(15, 4))
         
         # Get saved TTS speed or current rate
         try:
@@ -2014,31 +2097,40 @@ class Dashboard:
                     sapi_rate = int((rate - 175) / 25)
                     self.jarvis.tts.speaker.Rate = max(-10, min(10, sapi_rate))
                 self.tts_voice_speed = rate
+                speed_value_label.config(text=f"{rate} WPM")
                 self._save_settings()
                 self.logger.info(f"Voice speed changed to: {rate}")
             except Exception as e:
                 self.logger.error(f"Failed to change speed: {e}")
         
+        speed_control_frame = tk.Frame(voice_container, bg='#0a0e1a')
+        speed_control_frame.pack(fill='x', pady=4)
+        
         speed_scale = tk.Scale(
-            speed_frame,
+            speed_control_frame,
             from_=100,
             to=300,
             orient='horizontal',
             variable=speed_var,
-            bg='#2a2a2a',
+            bg='#1a2332',
             fg='#00d4cc',
             highlightthickness=0,
-            command=update_speed
+            troughcolor='#0f1826',
+            activebackground='#00ffff',
+            command=update_speed,
+            showvalue=0
         )
-        speed_scale.pack(fill='x')
+        speed_scale.pack(side='left', fill='x', expand=True, padx=(0, 10))
         
-        tk.Label(
-            speed_frame,
-            text="(100 = Slow, 175 = Normal, 300 = Fast)",
-            font=('Courier', 8),
-            fg='#888',
-            bg='#1a1a1a'
-        ).pack(anchor='w')
+        speed_value_label = tk.Label(
+            speed_control_frame,
+            text=f"{current_rate} WPM",
+            font=('Consolas', 10, 'bold'),
+            fg='#00ffff',
+            bg='#0a0e1a',
+            width=10
+        )
+        speed_value_label.pack(side='right')
         
         # Test voice button
         def test_voice():
@@ -2049,57 +2141,22 @@ class Dashboard:
                 self.logger.error(f"Voice test failed: {e}")
         
         tk.Button(
-            speed_frame,
-            text="🎙 Test Voice",
+            voice_container,
+            text="🎙  Test Voice",
             command=test_voice,
             bg='#00d4cc',
             fg='#000000',
-            font=('Courier', 9, 'bold'),
+            font=('Segoe UI', 10, 'bold'),
             relief='flat',
-            padx=15,
-            pady=3
-        ).pack(anchor='w', pady=5)
-        
-        # === THEME SELECTION ===
-        theme_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        theme_frame.pack(fill='x', padx=20, pady=10)
-        
-        tk.Label(
-            theme_frame,
-            text="Theme:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w')
-        
-        theme_var = tk.StringVar(value=self.themes[self.current_theme])
-        for theme_key, theme_name in self.themes.items():
-            rb = tk.Radiobutton(
-                theme_frame,
-                text=theme_name,
-                variable=theme_var,
-                value=theme_name,
-                font=('Courier', 9),
-                fg='#00d4cc',
-                bg='#1a1a1a',
-                selectcolor='#2a2a2a',
-                activebackground='#1a1a1a',
-                activeforeground='#00ffff',
-                command=lambda k=theme_key: self._apply_theme_from_settings(k)
-            )
-            rb.pack(anchor='w', padx=10)
+            padx=20,
+            pady=8,
+            cursor='hand2'
+        ).pack(anchor='w', pady=(10, 0))
         
         # === ADVANCED SETTINGS ===
-        advanced_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        advanced_frame.pack(fill='x', padx=20, pady=10)
+        create_section_header(scrollable_frame, "⚡", "ADVANCED", "System preferences and debugging")
         
-        tk.Label(
-            advanced_frame,
-            text="⚡ Advanced Settings:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w', pady=(0, 5))
+        advanced_container = create_option_container(scrollable_frame)
         
         # Start with Windows
         def check_startup_enabled():
@@ -2144,16 +2201,17 @@ class Dashboard:
         
         startup_var = tk.BooleanVar(value=check_startup_enabled())
         tk.Checkbutton(
-            advanced_frame,
+            advanced_container,
             text="Start JARVIS with Windows",
             variable=startup_var,
-            font=('Courier', 9),
+            font=('Segoe UI', 10),
             fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
+            bg='#0a0e1a',
+            selectcolor='#1a2332',
+            activebackground='#0a0e1a',
+            activeforeground='#00ffff',
             command=toggle_startup
-        ).pack(anchor='w', padx=10)
+        ).pack(anchor='w', pady=3)
         
         # Minimize to tray
         def toggle_tray():
@@ -2165,16 +2223,17 @@ class Dashboard:
         
         tray_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
-            advanced_frame,
+            advanced_container,
             text="Minimize to system tray (requires restart)",
             variable=tray_var,
-            font=('Courier', 9),
+            font=('Segoe UI', 10),
             fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
+            bg='#0a0e1a',
+            selectcolor='#1a2332',
+            activebackground='#0a0e1a',
+            activeforeground='#00ffff',
             command=toggle_tray
-        ).pack(anchor='w', padx=10)
+        ).pack(anchor='w', pady=3)
         
         # Auto-update
         def toggle_updates():
@@ -2187,16 +2246,17 @@ class Dashboard:
         
         update_var = tk.BooleanVar(value=self.check_updates_on_startup)
         tk.Checkbutton(
-            advanced_frame,
+            advanced_container,
             text="Check for updates on startup",
             variable=update_var,
-            font=('Courier', 9),
+            font=('Segoe UI', 10),
             fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
+            bg='#0a0e1a',
+            selectcolor='#1a2332',
+            activebackground='#0a0e1a',
+            activeforeground='#00ffff',
             command=toggle_updates
-        ).pack(anchor='w', padx=10)
+        ).pack(anchor='w', pady=3)
         
         # Auto-download updates
         def toggle_auto_download():
@@ -2209,40 +2269,64 @@ class Dashboard:
         
         auto_download_var = tk.BooleanVar(value=self.auto_download_updates)
         tk.Checkbutton(
-            advanced_frame,
+            advanced_container,
             text="Automatically download updates",
             variable=auto_download_var,
-            font=('Courier', 9),
+            font=('Segoe UI', 10),
             fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
+            bg='#0a0e1a',
+            selectcolor='#1a2332',
+            activebackground='#0a0e1a',
+            activeforeground='#00ffff',
             command=toggle_auto_download
-        ).pack(anchor='w', padx=10)
+        ).pack(anchor='w', pady=3)
+        
+        # Sound effects
+        def toggle_sounds():
+            self.enable_sound_effects = sounds_var.get()
+            if self.enable_sound_effects:
+                self.logger.info("Sound effects enabled")
+            else:
+                self.logger.info("Sound effects disabled")
+            self._save_settings()
+        
+        sounds_var = tk.BooleanVar(value=getattr(self, 'enable_sound_effects', True))
+        tk.Checkbutton(
+            advanced_container,
+            text="Enable sound effects",
+            variable=sounds_var,
+            font=('Segoe UI', 10),
+            fg='#e0e6ed',
+            bg='#0a0e1a',
+            selectcolor='#1a2332',
+            activebackground='#0a0e1a',
+            activeforeground='#00ffff',
+            command=toggle_sounds
+        ).pack(anchor='w', pady=3)
         
         # GitHub repo configuration
         tk.Label(
-            advanced_frame,
-            text="GitHub Repository (owner/repo):",
-            font=('Courier', 8),
-            fg='#888',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10, pady=(5, 0))
+            advanced_container,
+            text="GitHub Repository",
+            font=('Segoe UI', 10, 'bold'),
+            fg='#ffffff',
+            bg='#0a0e1a'
+        ).pack(anchor='w', pady=(12, 4))
         
-        repo_frame = tk.Frame(advanced_frame, bg='#1a1a1a')
-        repo_frame.pack(anchor='w', padx=10, fill='x')
+        repo_frame = tk.Frame(advanced_container, bg='#0a0e1a')
+        repo_frame.pack(anchor='w', fill='x')
         
         repo_entry = tk.Entry(
             repo_frame,
-            font=('Courier', 9),
-            bg='#2a2a2a',
+            font=('Consolas', 9),
+            bg='#1a2332',
             fg='#00d4cc',
-            insertbackground='#00d4cc',
-            bd=1,
+            insertbackground='#00ffff',
+            bd=0,
             relief='solid'
         )
         repo_entry.insert(0, self.github_repo)
-        repo_entry.pack(side='left', fill='x', expand=True, padx=(0, 5))
+        repo_entry.pack(side='left', fill='x', expand=True, padx=(0, 8), ipady=5)
         
         def save_repo():
             new_repo = repo_entry.get().strip()
@@ -2257,57 +2341,37 @@ class Dashboard:
             repo_frame,
             text="Save",
             command=save_repo,
-            bg='#2a2a2a',
-            fg='#00d4cc',
-            font=('Courier', 7, 'bold'),
+            bg='#00d4cc',
+            fg='#000000',
+            font=('Segoe UI', 8, 'bold'),
             relief='flat',
-            padx=5,
-            pady=2
+            padx=10,
+            pady=4,
+            cursor='hand2'
         ).pack(side='left')
         
         # Manual check button
         tk.Button(
-            advanced_frame,
+            advanced_container,
             text="🔍 Check for Updates Now",
             command=lambda: self._check_for_updates_async(manual_check=True),
-            bg='#2a2a2a',
-            fg='#00d4cc',
-            font=('Courier', 8, 'bold'),
+            bg='#1a2332',
+            fg='#00ffff',
+            font=('Segoe UI', 9, 'bold'),
             relief='flat',
-            padx=8,
-            pady=3
-        ).pack(anchor='w', padx=20, pady=5)
-        
-        # Sound effects
-        def toggle_sounds():
-            self.enable_sound_effects = sounds_var.get()
-            if self.enable_sound_effects:
-                self.logger.info("Sound effects enabled")
-            else:
-                self.logger.info("Sound effects disabled")
-            self._save_settings()
-        
-        sounds_var = tk.BooleanVar(value=getattr(self, 'enable_sound_effects', True))
-        tk.Checkbutton(
-            advanced_frame,
-            text="Enable sound effects",
-            variable=sounds_var,
-            font=('Courier', 9),
-            fg='#e0e6ed',
-            bg='#1a1a1a',
-            selectcolor='#2a2a2a',
-            activebackground='#1a1a1a',
-            command=toggle_sounds
-        ).pack(anchor='w', padx=10)
+            padx=15,
+            pady=6,
+            cursor='hand2'
+        ).pack(anchor='w', pady=(10, 0))
         
         # Logging level
         tk.Label(
-            advanced_frame,
-            text="Logging Level:",
-            font=('Courier', 9),
-            fg='#e0e6ed',
-            bg='#1a1a1a'
-        ).pack(anchor='w', padx=10, pady=(10, 0))
+            advanced_container,
+            text="Logging Level",
+            font=('Segoe UI', 10, 'bold'),
+            fg='#ffffff',
+            bg='#0a0e1a'
+        ).pack(anchor='w', pady=(12, 4))
         
         def change_log_level():
             level = log_level_var.get()
@@ -2324,8 +2388,8 @@ class Dashboard:
         log_level_var = tk.StringVar(value=current_level)
         log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
         
-        log_frame = tk.Frame(advanced_frame, bg='#1a1a1a')
-        log_frame.pack(anchor='w', padx=20)
+        log_frame = tk.Frame(advanced_container, bg='#0a0e1a')
+        log_frame.pack(anchor='w', pady=4)
         
         for level in log_levels:
             tk.Radiobutton(
@@ -2333,24 +2397,19 @@ class Dashboard:
                 text=level,
                 variable=log_level_var,
                 value=level,
-                font=('Courier', 8),
+                font=('Segoe UI', 9),
                 fg='#e0e6ed',
-                bg='#1a1a1a',
-                selectcolor='#2a2a2a',
+                bg='#0a0e1a',
+                selectcolor='#1a2332',
+                activebackground='#0a0e1a',
+                activeforeground='#00ffff',
                 command=change_log_level
-            ).pack(side='left', padx=5)
+            ).pack(side='left', padx=8)
         
         # === ABOUT INFO ===
-        about_frame = tk.Frame(scrollable_frame, bg='#1a1a1a')
-        about_frame.pack(fill='x', padx=20, pady=20)
+        create_section_header(scrollable_frame, "💻", "ABOUT", "")
         
-        tk.Label(
-            about_frame,
-            text="💻 About:",
-            font=('Courier', 11, 'bold'),
-            fg='#00d4cc',
-            bg='#1a1a1a'
-        ).pack(anchor='w', pady=(0, 5))
+        about_container = create_option_container(scrollable_frame)
         
         try:
             version_path = get_resource_path('VERSION')
@@ -2362,32 +2421,52 @@ class Dashboard:
         except:
             version = '1.0.0'
         
-        info_text = f"J.A.R.V.I.S. Omega v{version}\n" \
-                    f"Just A Rather Very Intelligent System\n\n" \
-                    f"Created with Python \u2022 Powered by AI\n" \
-                    f"Licensed Software"
+        # About box
+        about_box = tk.Frame(about_container, bg='#1a2332', bd=1, relief='solid')
+        about_box.pack(fill='x', ipady=15, ipadx=15)
         
         tk.Label(
-            about_frame,
-            text=info_text,
-            font=('Courier', 8),
-            fg='#888',
-            bg='#1a1a1a',
-            justify='left'
-        ).pack(anchor='w', padx=10)
+            about_box,
+            text=f"J.A.R.V.I.S. Omega v{version}",
+            font=('Segoe UI', 12, 'bold'),
+            fg='#00ffff',
+            bg='#1a2332'
+        ).pack(anchor='w')
         
-        # Close button
+        tk.Label(
+            about_box,
+            text="Just A Rather Very Intelligent System",
+            font=('Segoe UI', 9, 'italic'),
+            fg='#7a8a9a',
+            bg='#1a2332'
+        ).pack(anchor='w', pady=(2, 8))
+        
+        info_text = "Created with Python • Powered by AI\nLicensed Software"
+        tk.Label(
+            about_box,
+            text=info_text,
+            font=('Segoe UI', 8),
+            fg='#aaaaaa',
+            bg='#1a2332',
+            justify='left'
+        ).pack(anchor='w')
+        
+        # Bottom section with close button
+        bottom_frame = tk.Frame(self.settings_window, bg='#0a0e1a')
+        bottom_frame.pack(fill='x', pady=15)
+        
         tk.Button(
-            self.settings_window,
-            text="Close",
+            bottom_frame,
+            text="Close Settings",
             command=on_close,
             bg='#00d4cc',
             fg='#000000',
-            font=('Arial', 10, 'bold'),
+            font=('Segoe UI', 11, 'bold'),
             relief='flat',
-            padx=20,
-            pady=5
-        ).pack(pady=20)
+            padx=40,
+            pady=10,
+            cursor='hand2'
+        ).pack()
     
     def _apply_theme_from_settings(self, theme_key):
         """Apply theme from settings window."""
@@ -4091,7 +4170,7 @@ class Dashboard:
             # If root is destroyed or not available, just update state
             pass
     
-    def _on_talk(self):
+    def _on_talk(self, event=None):
         """Handle talk command from menu."""
         import threading
         thread = threading.Thread(target=self.jarvis.listen_and_respond)
