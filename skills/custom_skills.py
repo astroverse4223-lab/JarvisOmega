@@ -37,6 +37,7 @@ class CustomSkill(BaseSkill):
         """
         super().__init__(config)
         self.logger = logging.getLogger("jarvis.skills.custom")
+        self.path_variables = {}  # Store resolved paths
         self.custom_commands = self._load_custom_commands()
         
         # Register custom intents
@@ -45,6 +46,64 @@ class CustomSkill(BaseSkill):
             self.intents.append(cmd['trigger'])
         
         self.logger.info(f"Loaded {len(self.custom_commands)} custom commands")
+    
+    def _get_default_paths(self):
+        """Get default Windows folder paths."""
+        from pathlib import Path
+        import os
+        
+        paths = {}
+        
+        # Desktop - handle OneDrive
+        onedrive_desktop = Path.home() / "OneDrive" / "Desktop"
+        standard_desktop = Path.home() / "Desktop"
+        paths['desktop'] = str(onedrive_desktop if onedrive_desktop.exists() else standard_desktop)
+        
+        # Downloads
+        paths['downloads'] = str(Path.home() / "Downloads")
+        
+        # Documents - handle OneDrive
+        onedrive_docs = Path.home() / "OneDrive" / "Documents"
+        standard_docs = Path.home() / "Documents"
+        paths['documents'] = str(onedrive_docs if onedrive_docs.exists() else standard_docs)
+        
+        # Pictures
+        paths['pictures'] = str(Path.home() / "Pictures")
+        
+        # Music
+        paths['music'] = str(Path.home() / "Music")
+        
+        # Videos
+        paths['videos'] = str(Path.home() / "Videos")
+        
+        # Try to get from Windows registry if available
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
+                                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
+            
+            registry_paths = {
+                'desktop': 'Desktop',
+                'downloads': '{374DE290-123F-4565-9164-39C4925E467B}',
+                'documents': 'Personal',
+                'pictures': 'My Pictures',
+                'music': 'My Music',
+                'videos': 'My Video'
+            }
+            
+            for key_name, reg_name in registry_paths.items():
+                try:
+                    value = winreg.QueryValueEx(key, reg_name)[0]
+                    if value and os.path.exists(value):
+                        paths[key_name] = value
+                except:
+                    pass
+            
+            winreg.CloseKey(key)
+        except:
+            pass
+        
+        return paths
     
     def _load_custom_commands(self) -> List[Dict[str, Any]]:
         """Load custom commands from YAML file."""
@@ -59,10 +118,32 @@ class CustomSkill(BaseSkill):
             
             with open(config_path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)
+                
+                # Load path configuration
+                custom_paths = data.get('paths', {})
+                default_paths = self._get_default_paths()
+                
+                # Merge custom paths with defaults
+                for key, value in default_paths.items():
+                    custom_value = custom_paths.get(key, '')
+                    if custom_value and os.path.exists(custom_value):
+                        self.path_variables[key.upper()] = custom_value
+                    else:
+                        self.path_variables[key.upper()] = value
+                
+                self.logger.info(f"Loaded path variables: {list(self.path_variables.keys())}")
+                
                 return data.get('commands', [])
         except Exception as e:
             self.logger.error(f"Failed to load custom commands: {e}")
             return []
+    
+    def _replace_path_variables(self, command: str) -> str:
+        """Replace path variables like {DESKTOP} with actual paths."""
+        result = command
+        for var_name, var_path in self.path_variables.items():
+            result = result.replace(f"{{{var_name}}}", var_path)
+        return result
     
     def can_handle(self, intent: str, entities: dict) -> bool:
         """Check if this skill can handle the intent."""
@@ -159,6 +240,24 @@ class CustomSkill(BaseSkill):
                 self.logger.warning(f"Command requires confirmation: {matching_cmd['name']}")
                 return f"Confirmation required: {matching_cmd['description']}"
             
+            # Special handling for script generator - extract description after trigger
+            if 'script_generator.py' in matching_cmd.get('command', ''):
+                trigger = matching_cmd['trigger'].lower().strip()
+                # Extract text after the trigger phrase
+                import re
+                # Remove the trigger phrase and get what comes after
+                pattern = re.escape(trigger) + r'\s+(.*)'
+                match = re.search(pattern, text_to_check, re.IGNORECASE)
+                if match:
+                    description = match.group(1).strip()
+                    if description:
+                        # Pass the description as arguments
+                        return self._execute_command(matching_cmd, extra_args=description)
+                    else:
+                        return "Please tell me what kind of script you want. For example: 'write me a script that organizes files by date'"
+                else:
+                    return "Please tell me what kind of script you want. For example: 'write me a script that organizes files by date'"
+            
             # Execute immediately
             return self._execute_command(matching_cmd)
             
@@ -166,11 +265,18 @@ class CustomSkill(BaseSkill):
             self.logger.error(f"Custom command execution failed: {e}", exc_info=True)
             return f"Error executing command: {str(e)}"
     
-    def _execute_command(self, cmd: Dict[str, Any]) -> str:
+    def _execute_command(self, cmd: Dict[str, Any], extra_args: str = None) -> str:
         """Execute the actual command and return result message."""
         try:
             action = cmd['action'].lower()
             command = cmd['command']
+            
+            # Replace path variables in command
+            command = self._replace_path_variables(command)
+            
+            # Add extra arguments if provided (for script generator)
+            if extra_args:
+                command = f"{command} {extra_args}"
             
             self.logger.info(f"Running {action} command: {command[:50]}...")
             
@@ -200,8 +306,10 @@ class CustomSkill(BaseSkill):
                 from io import StringIO
                 
                 try:
-                    # Get the full path to the script
-                    script_path = get_resource_path(command)
+                    # Parse command to extract script path and arguments
+                    parts = command.split()
+                    script_path = get_resource_path(parts[0])
+                    script_args = parts[1:] if len(parts) > 1 else []
                     
                     # Load the module dynamically
                     spec = importlib.util.spec_from_file_location("temp_module", script_path)
@@ -210,7 +318,11 @@ class CustomSkill(BaseSkill):
                         
                         # Capture stdout
                         old_stdout = sys.stdout
+                        old_argv = sys.argv
                         sys.stdout = StringIO()
+                        
+                        # Set argv to include script name and arguments
+                        sys.argv = [script_path] + script_args
                         
                         try:
                             # Execute the module
@@ -225,8 +337,9 @@ class CustomSkill(BaseSkill):
                             return output if output else f"Executed: {cmd['description']}"
                             
                         finally:
-                            # Restore stdout
+                            # Restore stdout and argv
                             sys.stdout = old_stdout
+                            sys.argv = old_argv
                     else:
                         return f"Failed to load script: {command}"
                         

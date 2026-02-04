@@ -94,6 +94,60 @@ class MemorySystem:
                 )
             """)
             
+            # Agent debates table - stores internal multi-agent reasoning
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS agent_debates (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    interaction_id INTEGER,
+                    timestamp TEXT NOT NULL,
+                    user_input TEXT NOT NULL,
+                    analyst_response TEXT,
+                    analyst_confidence REAL,
+                    skeptic_response TEXT,
+                    skeptic_confidence REAL,
+                    architect_response TEXT,
+                    architect_confidence REAL,
+                    expert_response TEXT,
+                    expert_confidence REAL,
+                    expert_domain TEXT,
+                    overall_confidence REAL,
+                    jarvis_decision TEXT,
+                    duration_seconds REAL,
+                    debate_metadata TEXT,
+                    FOREIGN KEY (interaction_id) REFERENCES conversations(id)
+                )
+            """)
+            
+            # Agent beliefs table - tracks agent opinions over time
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS agent_beliefs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_name TEXT NOT NULL,
+                    topic_key TEXT NOT NULL,
+                    opinion TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    interaction_count INTEGER,
+                    timestamp TEXT NOT NULL,
+                    UNIQUE(agent_name, topic_key)
+                )
+            """)
+            
+            # Migrate existing agent_debates table to add new columns
+            # Check if columns exist, add them if they don't
+            cursor.execute("PRAGMA table_info(agent_debates)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'analyst_confidence' not in columns:
+                self.logger.info("Migrating agent_debates table - adding confidence columns")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN analyst_confidence REAL")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN skeptic_confidence REAL")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN architect_confidence REAL")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN expert_response TEXT")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN expert_confidence REAL")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN expert_domain TEXT")
+                cursor.execute("ALTER TABLE agent_debates ADD COLUMN overall_confidence REAL")
+                self.logger.info("Migration complete - confidence tracking enabled")
+            
             conn.commit()
             self.logger.debug("Database schema initialized")
     
@@ -104,7 +158,7 @@ class MemorySystem:
         intent: str = None,
         success: bool = True,
         metadata: Dict = None
-    ):
+    ) -> Optional[int]:
         """
         Store a conversation interaction.
         
@@ -114,6 +168,9 @@ class MemorySystem:
             intent: Classified intent
             success: Whether the interaction was successful
             metadata: Additional metadata (optional)
+            
+        Returns:
+            ID of inserted interaction, or None if failed
         """
         try:
             import json
@@ -132,13 +189,17 @@ class MemorySystem:
                     success,
                     json.dumps(metadata) if metadata else None
                 ))
+                interaction_id = cursor.lastrowid
                 conn.commit()
             
             # Cleanup old conversations if limit exceeded
             self._cleanup_old_conversations()
             
+            return interaction_id
+            
         except Exception as e:
             self.logger.error(f"Failed to store interaction: {e}")
+            return None
     
     def get_recent_context(self, limit: int = 5) -> List[Dict[str, str]]:
         """
@@ -450,3 +511,176 @@ class MemorySystem:
         except Exception as e:
             self.logger.error(f"Failed to get suggestions: {e}")
             return []
+    
+    def store_agent_debate(
+        self,
+        user_input: str,
+        debate_result: Dict,
+        jarvis_decision: str,
+        interaction_id: int = None
+    ):
+        """
+        Store multi-agent debate results with confidence tracking.
+        
+        Args:
+            user_input: Original user request
+            debate_result: Dictionary from MultiAgentDebate.debate()
+            jarvis_decision: Final decision/response from Jarvis
+            interaction_id: Link to conversations table (optional)
+        """
+        try:
+            import json
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    INSERT INTO agent_debates (
+                        interaction_id,
+                        timestamp,
+                        user_input,
+                        analyst_response,
+                        analyst_confidence,
+                        skeptic_response,
+                        skeptic_confidence,
+                        architect_response,
+                        architect_confidence,
+                        expert_response,
+                        expert_confidence,
+                        expert_domain,
+                        overall_confidence,
+                        jarvis_decision,
+                        duration_seconds,
+                        debate_metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    interaction_id,
+                    debate_result.get('timestamp'),
+                    user_input,
+                    debate_result.get('analyst_response'),
+                    debate_result.get('analyst_confidence', 0.7),
+                    debate_result.get('skeptic_response'),
+                    debate_result.get('skeptic_confidence', 0.7),
+                    debate_result.get('architect_response'),
+                    debate_result.get('architect_confidence', 0.7),
+                    debate_result.get('expert_response'),
+                    debate_result.get('expert_confidence'),
+                    debate_result.get('expert_domain'),
+                    debate_result.get('overall_confidence', 0.7),
+                    jarvis_decision,
+                    debate_result.get('duration_seconds'),
+                    json.dumps({
+                        'enabled': debate_result.get('enabled', False),
+                        'error': debate_result.get('error')
+                    })
+                ))
+                
+                conn.commit()
+                self.logger.debug(f"Agent debate stored (confidence: {debate_result.get('overall_confidence', 0.7):.2f})")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to store agent debate: {e}")
+    
+    def get_recent_debates(self, limit: int = 10) -> List[Dict]:
+        """
+        Get recent agent debates for analysis/UI with confidence levels.
+        
+        Args:
+            limit: Maximum number of debates to retrieve
+            
+        Returns:
+            List of debate records with all agent responses and confidence
+        """
+        try:
+            import json
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        id,
+                        timestamp,
+                        user_input,
+                        analyst_response,
+                        analyst_confidence,
+                        skeptic_response,
+                        skeptic_confidence,
+                        architect_response,
+                        architect_confidence,
+                        expert_response,
+                        expert_confidence,
+                        expert_domain,
+                        overall_confidence,
+                        jarvis_decision,
+                        duration_seconds,
+                        debate_metadata
+                    FROM agent_debates
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (limit,))
+                
+                debates = []
+                for row in cursor.fetchall():
+                    debates.append({
+                        'id': row[0],
+                        'timestamp': row[1],
+                        'user_input': row[2],
+                        'analyst_response': row[3],
+                        'analyst_confidence': row[4],
+                        'skeptic_response': row[5],
+                        'skeptic_confidence': row[6],
+                        'architect_response': row[7],
+                        'architect_confidence': row[8],
+                        'expert_response': row[9],
+                        'expert_confidence': row[10],
+                        'expert_domain': row[11],
+                        'overall_confidence': row[12],
+                        'jarvis_decision': row[13],
+                        'duration_seconds': row[14],
+                        'metadata': json.loads(row[15]) if row[15] else {},
+                        'enabled': True
+                    })
+                
+                return debates
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get debates: {e}")
+            return []
+    
+    def store_agent_belief(self, agent_name: str, topic_key: str, opinion: str, 
+                          confidence: float, interaction_count: int):
+        """Store agent belief/opinion for learning over time."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO agent_beliefs
+                    (agent_name, topic_key, opinion, confidence, interaction_count, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (agent_name, topic_key, opinion, confidence, 
+                     interaction_count, datetime.now().isoformat()))
+                conn.commit()
+        except Exception as e:
+            self.logger.error(f"Failed to store agent belief: {e}")
+    
+    def get_agent_belief(self, agent_name: str, topic_key: str) -> Optional[Dict]:
+        """Retrieve agent's previous opinion on topic."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT opinion, confidence, interaction_count, timestamp
+                    FROM agent_beliefs
+                    WHERE agent_name = ? AND topic_key = ?
+                """, (agent_name, topic_key))
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'opinion': row[0],
+                        'confidence': row[1],
+                        'interaction_count': row[2],
+                        'timestamp': row[3]
+                    }
+        except Exception as e:
+            self.logger.error(f"Failed to get agent belief: {e}")
+        return None

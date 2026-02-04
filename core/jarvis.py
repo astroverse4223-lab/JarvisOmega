@@ -14,6 +14,7 @@ from core.llm import AIBrain
 from core.tts import VoiceSynthesizer
 from core.memory import MemorySystem
 from core.license_validator import get_validator
+from core.agents import MultiAgentDebate
 from skills import SkillsEngine
 
 
@@ -40,6 +41,12 @@ class Jarvis:
         self._license_check_thread = None
         self._last_license_check = None
         
+        # Idle thought loop
+        self._idle_thread = None
+        self._idle_active = False
+        self._last_interaction_time = time.time()
+        self._idle_cooldown = 300  # 5 minutes before idle thoughts start
+        
         # Initialize subsystems
         self.logger.info("Initializing subsystems...")
         
@@ -64,6 +71,18 @@ class Jarvis:
             self.memory = MemorySystem(config['memory']) if config['memory']['enabled'] else None
             if self.memory:
                 self.logger.info("✓ Memory initialized")
+            
+            # Multi-Agent Debate System (requires AI Brain)
+            if self.brain and config['llm'].get('multi_agent_enabled', True):
+                model = config['llm'].get('model', 'llama3.2:3b')
+                self.agents = MultiAgentDebate(model=model, enabled=True)
+                self.logger.info("✓ Multi-Agent Debate System initialized")
+            else:
+                self.agents = None
+                if not self.brain:
+                    self.logger.info("✓ Multi-Agent Debate disabled (AI Brain disabled)")
+                else:
+                    self.logger.info("✓ Multi-Agent Debate disabled (config)")
             
             # Skills Engine
             self.skills = SkillsEngine(config['skills'])
@@ -169,7 +188,71 @@ class Jarvis:
             )
             self._license_check_thread.start()
             self.logger.info("License validation thread started")
-
+    
+    def _start_idle_thought_loop(self):
+        """Start the idle thought loop background thread."""
+        if not self.agents:
+            return
+        
+        self._idle_active = True
+        self._idle_thread = threading.Thread(
+            target=self._idle_thought_loop,
+            daemon=True
+        )
+        self._idle_thread.start()
+        self.logger.info("Idle thought loop started")
+    
+    def _idle_thought_loop(self):
+        """Background loop for agent self-reflection when idle."""
+        self.logger.info("Idle thought loop active")
+        
+        while self._idle_active and self.is_running:
+            try:
+                time.sleep(30)  # Check every 30 seconds
+                
+                # Check if enough time has passed since last interaction
+                idle_time = time.time() - self._last_interaction_time
+                
+                if idle_time >= self._idle_cooldown:
+                    self.logger.info(f"Idle for {idle_time:.0f}s - generating self-reflection")
+                    
+                    # Generate philosophical self-reflection
+                    reflection_topics = [
+                        "What patterns have I noticed in user requests recently?",
+                        "How can I improve my responses?",
+                        "What topics does the user seem most interested in?",
+                        "Are there any unresolved questions I should remember?",
+                        "What new knowledge have I acquired today?"
+                    ]
+                    
+                    import random
+                    topic = random.choice(reflection_topics)
+                    
+                    # Run a debate on the topic
+                    debate_result = self.agents.debate(topic, context=None)
+                    
+                    # Store as special idle thought
+                    if self.memory and debate_result.get('architect_response'):
+                        self.memory.store_interaction(
+                            user_input=f"[Idle Reflection: {topic}]",
+                            response=debate_result['architect_response'],
+                            intent='idle_thought',
+                            success=True
+                        )
+                    
+                    # Update UI if available
+                    if self.dashboard:
+                        debate_result['user_input'] = f"[Idle Reflection: {topic}]"
+                        self.dashboard.update_internal_reasoning(debate_result)
+                    
+                    # Reset cooldown (wait another 5 minutes)
+                    self._last_interaction_time = time.time()
+                    
+            except Exception as e:
+                self.logger.error(f"Idle thought loop error: {e}")
+                time.sleep(60)
+        
+        self.logger.info("Idle thought loop stopped")
     
     def process_input(self, text: str) -> str:
         """
@@ -240,8 +323,39 @@ class Jarvis:
                     limit=self.config['memory']['context_window']
                 )
             
+            # Multi-Agent Internal Debate (before Jarvis thinks)
+            debate_result = None
+            debate_context = context.copy() if context else []
+            
+            if self.agents:
+                self.logger.info("Starting internal multi-agent debate...")
+                debate_result = self.agents.debate(text, context)
+                
+                # Log debate summary
+                if debate_result['enabled']:
+                    self.logger.debug(self.agents.get_summary(debate_result))
+                    
+                    # Update UI with internal reasoning if dashboard exists
+                    if self.dashboard:
+                        self.dashboard.update_internal_reasoning(debate_result)
+                    
+                    # Add debate insights to context for Jarvis' decision
+                    if debate_result.get('architect_response'):
+                        # Add Architect's synthesis as context (final agent perspective)
+                        debate_context.append({
+                            'input': '[Internal Reasoning]',
+                            'response': f"Agent Analysis: {debate_result['architect_response']}"
+                        })
+                    elif debate_result.get('analyst_response'):
+                        # Fallback to Analyst if Architect failed
+                        debate_context.append({
+                            'input': '[Internal Reasoning]',
+                            'response': f"Initial Analysis: {debate_result['analyst_response']}"
+                        })
+            
             # Think: Get AI response with intent classification
-            response = self.brain.process(text, context)
+            # (Jarvis makes final decision, informed by agent debate)
+            response = self.brain.process(text, debate_context)
             
             # Act: Check if this is a command or conversation
             if response['type'] == 'command':
@@ -254,12 +368,21 @@ class Jarvis:
                 
                 # Store in memory
                 if self.memory:
-                    self.memory.store_interaction(
+                    interaction_id = self.memory.store_interaction(
                         user_input=text,
                         response=result,
                         intent=response['intent'],
                         success=True
                     )
+                    
+                    # Store agent debate if it occurred
+                    if debate_result and debate_result['enabled']:
+                        self.memory.store_agent_debate(
+                            user_input=text,
+                            debate_result=debate_result,
+                            jarvis_decision=f"Command: {response['intent']} -> {result}",
+                            interaction_id=interaction_id
+                        )
                 
                 return result
             else:
@@ -268,12 +391,21 @@ class Jarvis:
                 
                 # Store in memory
                 if self.memory:
-                    self.memory.store_interaction(
+                    interaction_id = self.memory.store_interaction(
                         user_input=text,
                         response=reply,
                         intent='conversation',
                         success=True
                     )
+                    
+                    # Store agent debate if it occurred
+                    if debate_result and debate_result['enabled']:
+                        self.memory.store_agent_debate(
+                            user_input=text,
+                            debate_result=debate_result,
+                            jarvis_decision=f"Conversation: {reply}",
+                            interaction_id=interaction_id
+                        )
                 
                 return reply
                 
@@ -304,6 +436,9 @@ class Jarvis:
             
             # Process
             response = self.process_input(text)
+            
+            # Update last interaction time (resets idle thoughts)
+            self._last_interaction_time = time.time()
             
             # Update UI
             if self.dashboard:
@@ -376,6 +511,10 @@ class Jarvis:
         
         # Start background license validation
         self._start_license_validation_thread()
+        
+        # Start idle thought loop if agents enabled
+        if self.agents and self.config['llm'].get('idle_thoughts_enabled', False):
+            self._start_idle_thought_loop()
         
         # Run UI main loop
         self.dashboard.run()

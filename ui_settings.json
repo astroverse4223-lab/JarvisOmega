@@ -2,5 +2,10 @@
     "enable_sound_effects": true,
     "animation_delay": 33,
     "check_updates_on_startup": true,
-    "github_repo": "astroverse4223-lab/JarvisOmega"
+    "auto_download_updates": true,
+    "github_repo": "astroverse4223-lab/JarvisOmega",
+    "ui_opacity": 94,
+    "tts_voice_speed": 212,
+    "tts_voice_name": "Microsoft Hazel Desktop - English (Great Britain)",
+    "current_theme": "crimson"
 }

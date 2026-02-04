@@ -8,6 +8,22 @@
 #   command: "your command here"
 #   description: "What this does"
 #   confirm: false  # Set to true to ask for confirmation
+#
+# Path Variables:
+# You can use {DESKTOP}, {DOWNLOADS}, {DOCUMENTS} in commands
+# These will be replaced with your actual folder paths
+# Example: command: "Start-Process '{DOWNLOADS}'"
+
+# === PATH CONFIGURATION ===
+# Customize these paths for your system
+# Leave empty to use default Windows locations
+paths:
+  desktop: ""  # Leave empty for auto-detection (OneDrive or standard Desktop)
+  downloads: ""  # Leave empty for default Downloads folder
+  documents: ""  # Leave empty for default Documents folder
+  pictures: ""  # Leave empty for default Pictures folder
+  music: ""  # Leave empty for default Music folder
+  videos: ""  # Leave empty for default Videos folder
 
 commands:
   # === JARVIS CONTROL ===
@@ -1069,6 +1085,29 @@ commands:
     action: "theme"
     command: "amber"
     description: "Changes UI to Amber theme"
+    confirm: false
+  
+  # === CODE GENERATION ===
+  
+  - name: "Generate Python Script"
+    trigger: "write me a script"
+    action: "python"
+    command: "scripts/script_generator.py"
+    description: "Generates a Python script using AI"
+    confirm: false
+  
+  - name: "Create Python Script"
+    trigger: "create a script"
+    action: "python"
+    command: "scripts/script_generator.py"
+    description: "Creates a Python script using AI"
+    confirm: false
+  
+  - name: "Make Python Script"
+    trigger: "make me a script"
+    action: "python"
+    command: "scripts/script_generator.py"
+    description: "Makes a Python script using AI"
     confirm: false
   
   - name: "Change Theme Teal"

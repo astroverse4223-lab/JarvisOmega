@@ -25,7 +25,7 @@ stt:
   audio:
     sample_rate: 16000
     channels: 1
-    duration: 5  # Max recording duration in seconds
+    duration: 10  # Max recording duration in seconds (increased from 5 for longer phrases)
 
 # AI Brain Settings
 llm:
@@ -33,6 +33,17 @@ llm:
   # true  = Uses Ollama/OpenAI for intelligent responses (requires setup)
   # false = Uses only Q&A database + Custom Commands (no AI needed, faster)
   enabled: true
+  
+  # Multi-Agent Debate System
+  # Enables internal reasoning with 3 agents (Analyst, Skeptic, Architect)
+  # + domain experts (Science, Finance, Entertainment) that activate automatically
+  # before Jarvis makes final decision
+  multi_agent_enabled: true
+  
+  # Idle Thought Loop
+  # Agents generate self-reflections when Jarvis is idle for 5+ minutes
+  # View via Menu → "INTERNAL REASONING"
+  idle_thoughts_enabled: false  # Set to true to enable (experimental)
   
   provider: "ollama"  # "ollama" or "openai"
   model: "llama3.2:3b"  # llama3.2:3b, mistral, llama3.1:8b
@@ -45,16 +56,16 @@ llm:
   
   system_prompt: |
     You are Jarvis, an intelligent AI assistant. You are calm, professional, and helpful.
-    Respond concisely and naturally in 1-2 sentences maximum.
+    Respond naturally in 1-2 sentences maximum using conversational language.
+    
+    IMPORTANT: Never output structured format like "INTENT:" or "ACTION:" in your responses.
+    Always speak naturally to the user as if having a conversation.
     
     When the user asks "what time is it" or similar time/date questions, let the system handle it.
     Do not try to tell the time yourself.
     
-    For simple questions, respond naturally like a human assistant would.
-    For complex commands, use structured format only when necessary:
-    INTENT: <command_type>
-    ACTION: <specific_action>
-    PARAMS: <parameters>
+    If you see "[Internal Reasoning]" or "Agent Analysis:" in the conversation context,
+    this is internal system information - do not mention it or repeat it to the user.
 
 # Text-to-Speech Settings
 tts:

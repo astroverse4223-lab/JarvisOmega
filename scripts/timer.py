@@ -60,25 +60,33 @@ def countdown(minutes, message="Timer Complete"):
     seconds = minutes * 60
     end_time = datetime.now() + timedelta(seconds=seconds)
     
-    print(f"⏰ Timer started for {minutes} minute(s)")
+    print(f"⏰ Timer set for {minutes} minute(s)")
     print(f"Will complete at {end_time.strftime('%I:%M %p')}")
-    print(f"Timer running in background...")
     
-    try:
-        time.sleep(seconds)
-        print(f"\n✅ Timer complete! {minutes} minute(s) elapsed")
-        
-        # Show notification
-        if minutes == 1:
-            time_str = "1 minute"
-        else:
-            time_str = f"{minutes} minutes"
-        show_notification(
-            "Timer Complete! ⏰",
-            f"{time_str} timer finished - {message}"
-        )
-    except KeyboardInterrupt:
-        print("\n❌ Timer cancelled")
+    # Run in background using threading
+    import threading
+    
+    def timer_thread():
+        try:
+            time.sleep(seconds)
+            
+            # Show notification
+            if minutes == 1:
+                time_str = "1 minute"
+            else:
+                time_str = f"{minutes} minutes"
+            show_notification(
+                "Timer Complete! ⏰",
+                f"{time_str} timer finished - {message}"
+            )
+        except KeyboardInterrupt:
+            pass
+    
+    # Start timer in background thread
+    thread = threading.Thread(target=timer_thread, daemon=True)
+    thread.start()
+    
+    return f"Timer started for {minutes} minute(s)"
 
 def main():
     """Parse arguments and start timer"""

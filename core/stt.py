@@ -144,14 +144,17 @@ class SpeechRecognizer:
                 return np.concatenate(audio_buffer, axis=0)
             
             else:  # wake_word mode
-                # Simple implementation: record fixed duration after wake word
-                # In production, use voice activity detection (VAD)
+                # Dynamic recording: continue while speaking, stop after silence
                 self.logger.debug("Listening for wake word...")
                 
-                # Record audio with real-time level monitoring
                 audio_buffer = []
                 import time
                 start_time = time.time()
+                silence_threshold = 0.01  # RMS threshold for silence
+                silence_duration = 0  # Track consecutive silence
+                max_silence = 2.0  # Stop after 2 seconds of silence (increased from implicit 0)
+                min_audio_length = 0.5  # Minimum recording length
+                max_recording_time = 15  # Maximum recording time (safety limit)
                 
                 def callback(indata, frames, time_info, status):
                     if status:
@@ -172,9 +175,36 @@ class SpeechRecognizer:
                     samplerate=self.sample_rate,
                     channels=self.channels,
                     callback=callback
-                ):
-                    while time.time() - start_time < self.duration:
+                ) as stream:
+                    last_check_time = start_time
+                    
+                    while True:
                         sd.sleep(100)
+                        current_time = time.time()
+                        elapsed = current_time - start_time
+                        
+                        # Safety limit
+                        if elapsed > max_recording_time:
+                            self.logger.debug("Max recording time reached")
+                            break
+                        
+                        # Check silence every 0.1 seconds after minimum audio length
+                        if elapsed > min_audio_length and current_time - last_check_time >= 0.1:
+                            last_check_time = current_time
+                            
+                            # Get recent audio for silence detection
+                            if len(audio_buffer) > 0:
+                                recent_audio = np.concatenate(audio_buffer[-5:] if len(audio_buffer) >= 5 else audio_buffer, axis=0)
+                                rms = np.sqrt(np.mean(recent_audio**2))
+                                
+                                if rms < silence_threshold:
+                                    silence_duration += 0.1
+                                    if silence_duration >= max_silence:
+                                        self.logger.debug(f"Silence detected ({silence_duration:.1f}s), stopping recording")
+                                        break
+                                else:
+                                    # Reset silence counter when speech detected
+                                    silence_duration = 0
                 
                 if not audio_buffer:
                     return None

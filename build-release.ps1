@@ -10,14 +10,30 @@ Write-Host "  Jarvis Auto-Build & Package" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Get version
+# Get and auto-increment version
 $version = "1.0.0"
 if (Test-Path "VERSION") {
     $version = (Get-Content "VERSION" -Raw).Trim()
 }
 
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$releaseName = "Jarvis_v" + $version + "_" + $timestamp
+# Parse version parts (major.minor.patch)
+$versionParts = $version.Split('.')
+$major = [int]$versionParts[0]
+$minor = [int]$versionParts[1]
+$patch = [int]$versionParts[2]
+
+# Auto-increment patch version
+$patch++
+$newVersion = "$major.$minor.$patch"
+
+# Save new version (ASCII encoding to avoid BOM issues)
+Write-Host "Auto-incrementing version: $version -> $newVersion" -ForegroundColor Yellow
+$newVersion | Out-File -FilePath "VERSION" -Encoding ASCII -NoNewline
+
+# Use new version for release
+$version = $newVersion
+$releaseName = "Jarvis_v" + $version
+$releaseTag = "v" + $version
 
 # Step 1: Build executable
 if (-not $SkipBuild) {
@@ -240,4 +256,17 @@ Write-Host "  [OK] Quick start guide" -ForegroundColor Green
 Write-Host ""
 Write-Host "Ready to distribute! Share the ZIP file." -ForegroundColor Green
 Write-Host "Users extract and run Jarvis.exe - that's it!" -ForegroundColor Green
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host "  GitHub Release Instructions" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "To publish this release on GitHub:" -ForegroundColor Cyan
+Write-Host "  1. Go to: https://github.com/astroverse4223-lab/JarvisOmega/releases/new" -ForegroundColor White
+Write-Host "  2. Set tag: $releaseTag" -ForegroundColor White
+Write-Host "  3. Set title: JARVIS v$version" -ForegroundColor White
+Write-Host "  4. Upload: $zipPath" -ForegroundColor White
+Write-Host "  5. Publish release" -ForegroundColor White
+Write-Host ""
+Write-Host "Users with auto-update enabled will be notified!" -ForegroundColor Green
 Write-Host ""

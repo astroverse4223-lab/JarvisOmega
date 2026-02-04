@@ -5,7 +5,7 @@ Borderless circular widget with concentric animated rings and teal holographic a
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 import logging
 from typing import TYPE_CHECKING
 import math
@@ -542,27 +542,6 @@ class SplashScreen:
                         outline=self.primary_color, width=1
                     )
         
-        # === TECH GRID BACKGROUND ===
-        if self.frame > 10:
-            grid_spacing = 50
-            grid_alpha = min(0.3, (self.frame - 10) / 40)
-            
-            # Vertical lines
-            for x in range(0, self.width, grid_spacing):
-                if abs(x - cx) > 200:  # Don't draw near center
-                    self.canvas.create_line(
-                        x, 0, x, self.height,
-                        fill=self.secondary_color, width=1, dash=(2, 4)
-                    )
-            
-            # Horizontal lines  
-            for y in range(0, self.height, grid_spacing):
-                if abs(y - cy) > 200:  # Don't draw near center
-                    self.canvas.create_line(
-                        0, y, self.width, y,
-                        fill=self.secondary_color, width=1, dash=(2, 4)
-                    )
-        
         # === POWER-UP ANIMATION (STARTUP) ===
         if self.frame < 30:
             # Radial flash
@@ -753,7 +732,16 @@ class Dashboard:
             "cyberpunk": "Cyberpunk",
             "stealth": "Stealth",
             "emerald": "Emerald",
-            "gold": "Gold Rush"
+            "gold": "Gold Rush",
+            "midnight": "Midnight Blue",
+            "crimson": "Crimson",
+            "sapphire": "Sapphire",
+            "toxic": "Toxic",
+            "sunset": "Sunset",
+            "deep_space": "Deep Space",
+            "neon_pink": "Neon Pink",
+            "ocean": "Ocean",
+            "arctic": "Arctic"
         }
         
         # Theme voice command aliases
@@ -771,7 +759,25 @@ class Dashboard:
             "emerald": "emerald",
             "green": "emerald",
             "gold": "gold",
-            "yellow": "gold"
+            "yellow": "gold",
+            "midnight": "midnight",
+            "blue": "midnight",
+            "crimson": "crimson",
+            "red": "crimson",
+            "sapphire": "sapphire",
+            "royal": "sapphire",
+            "toxic": "toxic",
+            "lime": "toxic",
+            "sunset": "sunset",
+            "orange": "sunset",
+            "space": "deep_space",
+            "deep": "deep_space",
+            "pink": "neon_pink",
+            "neon": "neon_pink",
+            "ocean": "ocean",
+            "water": "ocean",
+            "arctic": "arctic",
+            "ice": "arctic"
         }
         
         # Apply theme
@@ -804,13 +810,21 @@ class Dashboard:
         }
         self._update_system_stats()
         
-        # Weather widget
-        self.weather_data = {
-            'temp': '--',
-            'condition': 'Loading',
-            'icon': '🌐'
+        # 3D Rotating Globe (v1.0.6)
+        self.globe = {
+            'rotation': 0,
+            'lat_lines': 6,
+            'lon_lines': 8,
+            'radius': 40,
+            'center_x': 150,
+            'center_y': 120,
+            'time_zones': [
+                {'city': 'NYC', 'offset': -5, 'weather': '☀️', 'temp': '72°F'},
+                {'city': 'LON', 'offset': 0, 'weather': '☁️', 'temp': '18°C'},
+                {'city': 'TKY', 'offset': 9, 'weather': '🌧️', 'temp': '24°C'}
+            ]
         }
-        self._fetch_weather()
+        self._fetch_globe_weather()
         
         # Notifications
         self.notifications = []
@@ -822,6 +836,16 @@ class Dashboard:
         
         # Avatar expressions
         self.avatar_expression = 'neutral'  # neutral, listening, thinking, speaking, happy
+        
+        # AI Processing Scanner (NEW FEATURE v1.0.4)
+        self.ai_scanner = {
+            'active': False,
+            'status': 'Standby',
+            'progress': 0,
+            'scan_angle': 0,
+            'activity_bars': [0] * 8,  # 8 activity indicators
+            'last_activity': ''
+        }
         
         # Holographic scan lines
         self.scan_line_y = 0
@@ -863,11 +887,25 @@ class Dashboard:
         self.active_popout = None  # 'history', 'commands', 'qa', None
         self.popout_regions = []  # Store clickable regions
         self.scroll_offset = {'history': 0, 'commands': 0, 'qa': 0}
+        self.search_filters = {'commands': '', 'qa': ''}  # Search text for filtering
         self.selected_item = None  # For editing
         
         # Settings
         self.settings_file = get_resource_path('ui_settings.json')
         self._load_settings()
+        
+        # Apply saved opacity
+        try:
+            opacity = getattr(self, 'ui_opacity', 100) / 100
+            self.root.attributes('-alpha', opacity)
+        except Exception as e:
+            self.logger.warning(f"Failed to apply opacity: {e}")
+        
+        # Apply saved TTS voice
+        self._apply_saved_voice()
+        
+        # Re-apply theme after loading saved theme preference
+        self._apply_theme()
         
         # Draw initial HUD
         self._draw_hud()
@@ -880,7 +918,10 @@ class Dashboard:
         
         # Check for updates on startup (after 2 seconds)
         if self.check_updates_on_startup:
+            self.logger.info("Update check on startup is ENABLED")
             self.root.after(2000, self._check_for_updates_async)
+        else:
+            self.logger.info("Update check on startup is DISABLED")
         
         self.logger.info("Modern Dashboard initialized - Open Mic Mode")
     
@@ -891,17 +932,17 @@ class Dashboard:
         
         if self.current_theme == "holographic_teal":
             # Dark Teal/Cyan Holographic (matching the image)
-            self.primary_glow = '#00d4cc'
-            self.secondary_glow = '#008b88'
+            self.primary_glow = '#00ffff'
+            self.secondary_glow = '#00d4cc'
             self.tertiary_glow = '#00ffee'
             self.accent_orange = '#00ccbb'
             self.accent_gold = '#44ddcc'
             self.accent_bright = '#00ffff'
             self.dark_overlay = '#001414'
             self.darker_overlay = '#000a0a'
-            self.text_color = '#00d4cc'
-            self.text_secondary = '#008b88'
-            self.text_dim = '#005555'
+            self.text_color = '#00ffff'
+            self.text_secondary = '#00d4cc'
+            self.text_dim = '#00aaaa'
             
         elif self.current_theme == "iron_man":
             # Red/Orange Iron Man
@@ -1014,6 +1055,132 @@ class Dashboard:
             self.text_color = '#ffaa00'
             self.text_secondary = '#cc8800'
             self.text_dim = '#996600'
+            
+        elif self.current_theme == "midnight":
+            # Midnight Blue
+            self.primary_glow = '#4466ff'
+            self.secondary_glow = '#2244cc'
+            self.tertiary_glow = '#5577ff'
+            self.accent_orange = '#6688ff'
+            self.accent_gold = '#7799ff'
+            self.accent_bright = '#8899ff'
+            self.dark_overlay = '#000a1a'
+            self.darker_overlay = '#000510'
+            self.text_color = '#5577ff'
+            self.text_secondary = '#3355cc'
+            self.text_dim = '#224488'
+            
+        elif self.current_theme == "crimson":
+            # Crimson Red
+            self.primary_glow = '#dc143c'
+            self.secondary_glow = '#aa0000'
+            self.tertiary_glow = '#ff1744'
+            self.accent_orange = '#ff4444'
+            self.accent_gold = '#ff6666'
+            self.accent_bright = '#ff0033'
+            self.dark_overlay = '#330000'
+            self.darker_overlay = '#1a0000'
+            self.text_color = '#ff1744'
+            self.text_secondary = '#cc0022'
+            self.text_dim = '#990011'
+            
+        elif self.current_theme == "sapphire":
+            # Royal Sapphire Blue
+            self.primary_glow = '#0f52ba'
+            self.secondary_glow = '#0a3d8f'
+            self.tertiary_glow = '#1565c0'
+            self.accent_orange = '#1e88e5'
+            self.accent_gold = '#42a5f5'
+            self.accent_bright = '#2196f3'
+            self.dark_overlay = '#001133'
+            self.darker_overlay = '#000918'
+            self.text_color = '#1565c0'
+            self.text_secondary = '#0d47a1'
+            self.text_dim = '#083a7a'
+            
+        elif self.current_theme == "toxic":
+            # Toxic Lime Green
+            self.primary_glow = '#bfff00'
+            self.secondary_glow = '#99cc00'
+            self.tertiary_glow = '#ccff33'
+            self.accent_orange = '#ddff00'
+            self.accent_gold = '#eeff44'
+            self.accent_bright = '#aaff00'
+            self.dark_overlay = '#1a2200'
+            self.darker_overlay = '#0d1100'
+            self.text_color = '#ccff33'
+            self.text_secondary = '#99cc22'
+            self.text_dim = '#778800'
+            
+        elif self.current_theme == "sunset":
+            # Sunset Orange/Pink
+            self.primary_glow = '#ff6b35'
+            self.secondary_glow = '#f45b69'
+            self.tertiary_glow = '#ff8c42'
+            self.accent_orange = '#ffaa44'
+            self.accent_gold = '#ffc857'
+            self.accent_bright = '#ff7f50'
+            self.dark_overlay = '#331100'
+            self.darker_overlay = '#1a0800'
+            self.text_color = '#ff8c42'
+            self.text_secondary = '#e76f51'
+            self.text_dim = '#cc5533'
+            
+        elif self.current_theme == "deep_space":
+            # Deep Space Purple/Blue
+            self.primary_glow = '#7b2cbf'
+            self.secondary_glow = '#5a189a'
+            self.tertiary_glow = '#9d4edd'
+            self.accent_orange = '#c77dff'
+            self.accent_gold = '#e0aaff'
+            self.accent_bright = '#b185db'
+            self.dark_overlay = '#1a0033'
+            self.darker_overlay = '#0d0018'
+            self.text_color = '#9d4edd'
+            self.text_secondary = '#7b2cbf'
+            self.text_dim = '#5a189a'
+            
+        elif self.current_theme == "neon_pink":
+            # Hot Neon Pink
+            self.primary_glow = '#ff10f0'
+            self.secondary_glow = '#cc00cc'
+            self.tertiary_glow = '#ff33ff'
+            self.accent_orange = '#ff00ff'
+            self.accent_gold = '#ff66ff'
+            self.accent_bright = '#ff44ff'
+            self.dark_overlay = '#330033'
+            self.darker_overlay = '#1a0018'
+            self.text_color = '#ff33ff'
+            self.text_secondary = '#dd00dd'
+            self.text_dim = '#990099'
+            
+        elif self.current_theme == "ocean":
+            # Deep Ocean Blue
+            self.primary_glow = '#00b4d8'
+            self.secondary_glow = '#0077b6'
+            self.tertiary_glow = '#0096c7'
+            self.accent_orange = '#00d9ff'
+            self.accent_gold = '#48cae4'
+            self.accent_bright = '#90e0ef'
+            self.dark_overlay = '#001824'
+            self.darker_overlay = '#000c12'
+            self.text_color = '#00b4d8'
+            self.text_secondary = '#0096c7'
+            self.text_dim = '#005577'
+            
+        elif self.current_theme == "arctic":
+            # Arctic White/Blue
+            self.primary_glow = '#e0f7fa'
+            self.secondary_glow = '#b2ebf2'
+            self.tertiary_glow = '#80deea'
+            self.accent_orange = '#4dd0e1'
+            self.accent_gold = '#26c6da'
+            self.accent_bright = '#00bcd4'
+            self.dark_overlay = '#1a2427'
+            self.darker_overlay = '#0d1214'
+            self.text_color = '#b2ebf2'
+            self.text_secondary = '#80deea'
+            self.text_dim = '#4dd0e1'
         
         self.root.configure(bg=self.bg_color)
     
@@ -1065,38 +1232,46 @@ class Dashboard:
         # Schedule next update
         self.root.after(2000, self._update_system_stats)
     
-    def _fetch_weather(self):
-        """Fetch weather data (simplified - uses free API)."""
+    def _fetch_globe_weather(self):
+        """Fetch weather data for time zone locations (v1.0.6)."""
         def fetch():
             try:
-                # Using wttr.in - a simple weather service
-                response = requests.get('https://wttr.in/?format=%t+%C+%w', timeout=5)
-                if response.status_code == 200:
-                    parts = response.text.strip().split()
-                    if len(parts) >= 2:
-                        self.weather_data['temp'] = parts[0]
-                        self.weather_data['condition'] = ' '.join(parts[1:])
-                        # Set icon based on condition
-                        condition_lower = self.weather_data['condition'].lower()
-                        if 'clear' in condition_lower or 'sunny' in condition_lower:
-                            self.weather_data['icon'] = '☀️'
-                        elif 'cloud' in condition_lower:
-                            self.weather_data['icon'] = '☁️'
-                        elif 'rain' in condition_lower:
-                            self.weather_data['icon'] = '🌧️'
-                        elif 'snow' in condition_lower:
-                            self.weather_data['icon'] = '❄️'
-                        else:
-                            self.weather_data['icon'] = '🌡️'
+                # Fetch weather for each time zone city
+                cities_api = {
+                    'NYC': 'New+York',
+                    'LON': 'London',
+                    'TKY': 'Tokyo'
+                }
+                
+                for tz in self.globe['time_zones']:
+                    try:
+                        city_name = cities_api.get(tz['city'], tz['city'])
+                        response = requests.get(f'https://wttr.in/{city_name}?format=%t+%C', timeout=3)
+                        if response.status_code == 200:
+                            parts = response.text.strip().split()
+                            if len(parts) >= 1:
+                                tz['temp'] = parts[0]
+                                # Set weather icon
+                                if len(parts) >= 2:
+                                    condition = ' '.join(parts[1:]).lower()
+                                    if 'clear' in condition or 'sunny' in condition:
+                                        tz['weather'] = '☀️'
+                                    elif 'cloud' in condition:
+                                        tz['weather'] = '☁️'
+                                    elif 'rain' in condition:
+                                        tz['weather'] = '🌧️'
+                                    elif 'snow' in condition:
+                                        tz['weather'] = '❄️'
+                    except:
+                        pass
             except Exception as e:
-                self.logger.debug(f"Weather fetch error: {e}")
-                self.weather_data = {'temp': '--', 'condition': 'Offline', 'icon': '🌐'}
+                self.logger.debug(f"Globe weather fetch error: {e}")
         
         # Fetch in background thread
         threading.Thread(target=fetch, daemon=True).start()
         
         # Schedule next update (every 30 minutes)
-        self.root.after(1800000, self._fetch_weather)
+        self.root.after(1800000, self._fetch_globe_weather)
     
     def add_notification(self, message, level='info'):
         """Add a notification to the notification system."""
@@ -1168,6 +1343,12 @@ class Dashboard:
                         return
                     elif region_type == 'add_qa':
                         self._open_qa_editor()
+                        return
+                    elif region_type == 'search_commands':
+                        self._prompt_search('commands')
+                        return
+                    elif region_type == 'search_qa':
+                        self._prompt_search('qa')
                         return
                     elif region_type == 'edit_command':
                         # Get the trigger from the stored data
@@ -1306,6 +1487,7 @@ class Dashboard:
         self.current_theme = theme_list[next_index]
         self._apply_theme()
         self._draw_hud()
+        self._save_settings()
         
         # Show theme name briefly
         theme_name = self.themes[self.current_theme]
@@ -1321,6 +1503,7 @@ class Dashboard:
             self.current_theme = new_theme
             self._apply_theme()
             self._draw_hud()
+            self._save_settings()
             
             theme_name = self.themes[self.current_theme]
             self.logger.info(f"Theme changed to: {theme_name}")
@@ -1347,12 +1530,20 @@ class Dashboard:
             time.sleep(0.3)
         
         try:
+            # Update AI Scanner status (NEW v1.0.4)
+            self.ai_scanner['status'] = f"Processing: {command[:15]}"
+            self.ai_scanner['last_activity'] = command
+            self.ai_scanner['active'] = True
+            
             # Simulate voice command
             response = self.jarvis.process_input(command)
             if response:
                 self.logger.info(f"Quick Action Result: {response}")
                 # Speak response
                 self.jarvis.tts.speak(response)
+                
+                # Update scanner with result
+                self.ai_scanner['status'] = "Complete"
         finally:
             # Resume open mic after speaking completes
             if was_listening:
@@ -1525,6 +1716,8 @@ class Dashboard:
             try:
                 opacity = float(val) / 100
                 self.root.attributes('-alpha', opacity)
+                self.ui_opacity = int(float(val))
+                self._save_settings()
             except:
                 pass
         
@@ -1538,7 +1731,7 @@ class Dashboard:
             highlightthickness=0,
             command=update_opacity
         )
-        opacity_scale.set(100)
+        opacity_scale.set(getattr(self, 'ui_opacity', 100))
         opacity_scale.pack(fill='x', padx=10)
         
         tk.Label(
@@ -1657,12 +1850,16 @@ class Dashboard:
                         voices = self.jarvis.tts.speaker.getProperty('voices')
                         if 0 <= idx < len(voices):
                             self.jarvis.tts.speaker.setProperty('voice', voices[idx].id)
+                            self.tts_voice_name = voices[idx].name
+                            self._save_settings()
                             self.logger.info(f"Voice changed to: {voices[idx].name}")
                     else:
                         # Windows SAPI
                         voices = self.jarvis.tts.speaker.GetVoices()
                         if 0 <= idx < voices.Count:
                             self.jarvis.tts.speaker.Voice = voices.Item(idx)
+                            self.tts_voice_name = voices.Item(idx).GetDescription()
+                            self._save_settings()
                             self.logger.info(f"Voice changed to: {voices.Item(idx).GetDescription()}")
                 except Exception as e:
                     self.logger.error(f"Failed to change voice: {e}")
@@ -1792,14 +1989,15 @@ class Dashboard:
             bg='#1a1a1a'
         ).pack(anchor='w')
         
-        # Get current rate
+        # Get saved TTS speed or current rate
         try:
+            current_rate = getattr(self, 'tts_voice_speed', 175)
+            # Apply saved speed to TTS engine
             if hasattr(self.jarvis.tts, 'use_pyttsx3') and self.jarvis.tts.use_pyttsx3:
-                current_rate = self.jarvis.tts.speaker.getProperty('rate')
+                self.jarvis.tts.speaker.setProperty('rate', current_rate)
             else:
-                # SAPI uses -10 to 10, convert to WPM (150-200 range)
-                sapi_rate = self.jarvis.tts.speaker.Rate
-                current_rate = int(175 + (sapi_rate * 25))
+                sapi_rate = int((current_rate - 175) / 25)
+                self.jarvis.tts.speaker.Rate = max(-10, min(10, sapi_rate))
         except:
             current_rate = 175
         
@@ -1815,6 +2013,8 @@ class Dashboard:
                     # Convert WPM to SAPI rate
                     sapi_rate = int((rate - 175) / 25)
                     self.jarvis.tts.speaker.Rate = max(-10, min(10, sapi_rate))
+                self.tts_voice_speed = rate
+                self._save_settings()
                 self.logger.info(f"Voice speed changed to: {rate}")
             except Exception as e:
                 self.logger.error(f"Failed to change speed: {e}")
@@ -2069,7 +2269,7 @@ class Dashboard:
         tk.Button(
             advanced_frame,
             text="🔍 Check for Updates Now",
-            command=self._check_for_updates_async,
+            command=lambda: self._check_for_updates_async(manual_check=True),
             bg='#2a2a2a',
             fg='#00d4cc',
             font=('Courier', 8, 'bold'),
@@ -2194,6 +2394,7 @@ class Dashboard:
         self.current_theme = theme_key
         self._apply_theme()
         self._draw_hud()
+        self._save_settings()
     
     def update_audio_level(self, level):
         """Update audio level for visualization (0.0 to 1.0)."""
@@ -2253,26 +2454,6 @@ class Dashboard:
                 cx - r, cy - r, cx + r, cy + r,
                 fill=gradient_color, outline=''
             )
-        
-        # === TECH GRID BACKGROUND ===
-        grid_spacing = 50
-        grid_alpha = 0.15
-        
-        # Vertical lines (subtle)
-        for x in range(0, self.width, grid_spacing):
-            if abs(x - cx) > 180:  # Don't draw too close to center
-                self.canvas.create_line(
-                    x, 0, x, self.height,
-                    fill=self.text_dim, width=1, dash=(3, 6)
-                )
-        
-        # Horizontal lines (subtle)
-        for y in range(0, self.height, grid_spacing):
-            if abs(y - cy) > 180:  # Don't draw too close to center
-                self.canvas.create_line(
-                    0, y, self.width, y,
-                    fill=self.text_dim, width=1, dash=(3, 6)
-                )
         
         # === MATRIX RAIN EFFECT (SUBTLE IN BACKGROUND) ===
         import random
@@ -2482,61 +2663,9 @@ class Dashboard:
                 outline=pulse_color, width=2
             )
         
-        # === CORNER INDICATORS ===
-        corner_offset = 30
-        corner_size = 20
-        
-        # Top-left
-        self.canvas.create_line(
-            corner_offset, corner_offset,
-            corner_offset + corner_size, corner_offset,
-            fill=self.primary_glow, width=2
-        )
-        self.canvas.create_line(
-            corner_offset, corner_offset,
-            corner_offset, corner_offset + corner_size,
-            fill=self.primary_glow, width=2
-        )
-        
-        # Top-right
-        self.canvas.create_line(
-            self.width - corner_offset, corner_offset,
-            self.width - corner_offset - corner_size, corner_offset,
-            fill=self.primary_glow, width=2
-        )
-        self.canvas.create_line(
-            self.width - corner_offset, corner_offset,
-            self.width - corner_offset, corner_offset + corner_size,
-            fill=self.primary_glow, width=2
-        )
-        
-        # Bottom-left
-        self.canvas.create_line(
-            corner_offset, self.height - corner_offset,
-            corner_offset + corner_size, self.height - corner_offset,
-            fill=self.primary_glow, width=2
-        )
-        self.canvas.create_line(
-            corner_offset, self.height - corner_offset,
-            corner_offset, self.height - corner_offset - corner_size,
-            fill=self.primary_glow, width=2
-        )
-        
-        # Bottom-right
-        self.canvas.create_line(
-            self.width - corner_offset, self.height - corner_offset,
-            self.width - corner_offset - corner_size, self.height - corner_offset,
-            fill=self.primary_glow, width=2
-        )
-        self.canvas.create_line(
-            self.width - corner_offset, self.height - corner_offset,
-            self.width - corner_offset, self.height - corner_offset - corner_size,
-            fill=self.primary_glow, width=2
-        )
-        
         # === TOP STATUS BAR ===
         self.canvas.create_text(
-            cx, 20,
+            cx, 45,
             text="J.A.R.V.I.S. OMEGA",
             font=('Courier New', 10, 'bold'),
             fill=self.text_color
@@ -2544,10 +2673,10 @@ class Dashboard:
         
         # === LIVE CLOCK (TOP CENTER-RIGHT, BELOW TITLE) ===
         self.canvas.create_text(
-            cx, 40,
+            cx, 65,
             text=f"⏰ {self.system_stats['time']}",
-            font=('Consolas', 8, 'bold'),
-            fill=self.text_secondary
+            font=('Consolas', 11, 'bold'),
+            fill=self.primary_glow
         )
         
         # === SYSTEM STATS PANEL (TOP RIGHT) ===
@@ -2559,7 +2688,7 @@ class Dashboard:
         self.canvas.create_text(
             stats_x, stats_y,
             text=f"CPU {int(self.system_stats['cpu'])}%",
-            font=('Consolas', 7, 'bold'),
+            font=('Consolas', 10, 'bold'),
             fill=cpu_color,
             anchor='e'
         )
@@ -2602,32 +2731,125 @@ class Dashboard:
             fill=ram_color, outline=''
         )
         
-        # === WEATHER WIDGET (TOP LEFT) ===
-        weather_x = 100
-        weather_y = 60
+        # === 3D ROTATING GLOBE (TOP LEFT) - NEW v1.0.6 ===
+        globe_cx = self.globe['center_x']
+        globe_cy = self.globe['center_y']
+        globe_r = self.globe['radius']
         
-        self.canvas.create_text(
-            weather_x, weather_y,
-            text=self.weather_data['icon'],
-            font=('Segoe UI Emoji', 14),
-            fill=self.text_color,
-            anchor='w'
+        # Draw outer sphere glow
+        for i in range(3):
+            glow_r = globe_r + (i * 3)
+            alpha = 0.3 - (i * 0.1)
+            self.canvas.create_oval(
+                globe_cx - glow_r, globe_cy - glow_r,
+                globe_cx + glow_r, globe_cy + glow_r,
+                outline=self.primary_glow, width=1
+            )
+        
+        # Draw main globe sphere
+        self.canvas.create_oval(
+            globe_cx - globe_r, globe_cy - globe_r,
+            globe_cx + globe_r, globe_cy + globe_r,
+            outline=self.primary_glow, width=2
         )
         
-        self.canvas.create_text(
-            weather_x + 30, weather_y - 5,
-            text=self.weather_data['temp'],
-            font=('Consolas', 9, 'bold'),
-            fill=self.text_color,
-            anchor='w'
-        )
+        # Draw latitude lines (rotating)
+        for i in range(self.globe['lat_lines']):
+            lat = (i / self.globe['lat_lines']) * 180 - 90
+            lat_r = globe_r * math.cos(math.radians(lat))
+            lat_y = globe_cy + globe_r * math.sin(math.radians(lat))
+            
+            if lat_r > 2:  # Only draw visible lines
+                self.canvas.create_oval(
+                    globe_cx - lat_r, lat_y - (lat_r * 0.2),
+                    globe_cx + lat_r, lat_y + (lat_r * 0.2),
+                    outline=self.text_dim, width=1
+                )
         
+        # Draw longitude lines (with rotation animation)
+        for i in range(self.globe['lon_lines']):
+            angle = (i * 360 / self.globe['lon_lines']) + self.globe['rotation']
+            x_offset = math.cos(math.radians(angle)) * globe_r * 0.3
+            
+            # Draw vertical arc
+            if abs(x_offset) < globe_r:
+                arc_width = math.sqrt(globe_r**2 - x_offset**2)
+                self.canvas.create_arc(
+                    globe_cx + x_offset - arc_width, globe_cy - globe_r,
+                    globe_cx + x_offset + arc_width, globe_cy + globe_r,
+                    start=0, extent=180,
+                    outline=self.text_dim, width=1, style='arc'
+                )
+        
+        # Draw day/night terminator (shadow line)
+        from datetime import datetime as dt_now
+        hour = dt_now.now().hour
+        night_angle = (hour * 15) + self.globe['rotation']  # 15 degrees per hour
+        
+        # Day side (lit)
+        day_x_offset = math.cos(math.radians(night_angle)) * globe_r * 0.8
+        if abs(day_x_offset) < globe_r:
+            day_width = math.sqrt(globe_r**2 - day_x_offset**2)
+            # Bright side indicator
+            self.canvas.create_arc(
+                globe_cx + day_x_offset - day_width, globe_cy - globe_r,
+                globe_cx + day_x_offset + day_width, globe_cy + globe_r,
+                start=-90, extent=180,
+                outline=self.accent_bright, width=2, style='arc'
+            )
+        
+        # Draw time zone markers
+        for idx, tz in enumerate(self.globe['time_zones']):
+            marker_angle = (idx * 120) + self.globe['rotation']  # 120 degrees apart
+            marker_x = globe_cx + math.cos(math.radians(marker_angle)) * (globe_r + 15)
+            marker_y = globe_cy + math.sin(math.radians(marker_angle)) * (globe_r + 15)
+            
+            # Time zone dot
+            dot_r = 3
+            self.canvas.create_oval(
+                marker_x - dot_r, marker_y - dot_r,
+                marker_x + dot_r, marker_y + dot_r,
+                fill=self.accent_bright, outline=''
+            )
+            
+            # Connection line to globe
+            line_x = globe_cx + math.cos(math.radians(marker_angle)) * globe_r
+            line_y = globe_cy + math.sin(math.radians(marker_angle)) * globe_r
+            self.canvas.create_line(
+                line_x, line_y, marker_x, marker_y,
+                fill=self.text_dim, width=1, dash=(2, 2)
+            )
+            
+            # City name and time
+            from datetime import datetime as dt, timedelta
+            utc_now = dt.utcnow()
+            local_time = utc_now + timedelta(hours=tz['offset'])
+            time_str = local_time.strftime('%H:%M')
+            
+            self.canvas.create_text(
+                marker_x, marker_y - 15,
+                text=f"{tz['city']} {time_str}",
+                font=('Consolas', 6, 'bold'),
+                fill=self.primary_glow,
+                anchor='center'
+            )
+            
+            # Weather icon and temp
+            self.canvas.create_text(
+                marker_x, marker_y + 12,
+                text=f"{tz['weather']} {tz['temp']}",
+                font=('Segoe UI Emoji', 6),
+                fill=self.text_color,
+                anchor='center'
+            )
+        
+        # Globe title
         self.canvas.create_text(
-            weather_x + 30, weather_y + 8,
-            text=self.weather_data['condition'][:15],
-            font=('Consolas', 6),
-            fill=self.text_secondary,
-            anchor='w'
+            globe_cx, globe_cy - globe_r - 15,
+            text="🌍 GLOBAL VIEW",
+            font=('Consolas', 7, 'bold'),
+            fill=self.primary_glow,
+            anchor='center'
         )
         
         # === NOTIFICATION BADGE (TOP LEFT) ===
@@ -2719,6 +2941,92 @@ class Dashboard:
         else:
             # Clear regions when panel is hidden
             self.quick_action_regions = []
+        
+        # === NEW FEATURE: AI PROCESSING SCANNER (v1.0.4) ===
+        if self.ai_scanner['active'] or self.current_state in ['processing', 'thinking']:
+            scanner_x = 80
+            scanner_y = self.height - 150
+            scanner_width = 180
+            scanner_height = 90
+            
+            # Scanner panel background
+            self.canvas.create_rectangle(
+                scanner_x, scanner_y,
+                scanner_x + scanner_width, scanner_y + scanner_height,
+                fill='#0a0a0a', outline=self.primary_glow, width=1
+            )
+            
+            # Title with animated icon
+            scan_icon = '🔍' if int(time.time() * 2) % 2 == 0 else '🔎'
+            self.canvas.create_text(
+                scanner_x + 10, scanner_y + 10,
+                text=f"{scan_icon} AI SCANNER",
+                font=('Consolas', 7, 'bold'),
+                fill=self.primary_glow,
+                anchor='w'
+            )
+            
+            # Status text
+            status = self.ai_scanner['status']
+            self.canvas.create_text(
+                scanner_x + 10, scanner_y + 25,
+                text=status[:25],
+                font=('Consolas', 6),
+                fill=self.text_color,
+                anchor='w'
+            )
+            
+            # Circular progress indicator (rotating scan line)
+            circle_cx = scanner_x + scanner_width - 35
+            circle_cy = scanner_y + 30
+            circle_r = 15
+            
+            # Draw circle
+            self.canvas.create_oval(
+                circle_cx - circle_r, circle_cy - circle_r,
+                circle_cx + circle_r, circle_cy + circle_r,
+                outline=self.primary_glow, width=1
+            )
+            
+            # Rotating scan line
+            angle_rad = math.radians(self.ai_scanner['scan_angle'])
+            line_x = circle_cx + math.cos(angle_rad) * circle_r
+            line_y = circle_cy + math.sin(angle_rad) * circle_r
+            self.canvas.create_line(
+                circle_cx, circle_cy, line_x, line_y,
+                fill=self.accent_bright, width=2
+            )
+            
+            # Activity bars (8 vertical bars showing AI activity)
+            bar_y = scanner_y + 50
+            bar_spacing = 20
+            for i in range(8):
+                bar_x = scanner_x + 15 + (i * bar_spacing)
+                bar_height = max(2, int(self.ai_scanner['activity_bars'][i] * 25))
+                
+                # Color based on height
+                if self.ai_scanner['activity_bars'][i] > 0.7:
+                    bar_color = self.accent_bright
+                elif self.ai_scanner['activity_bars'][i] > 0.4:
+                    bar_color = self.primary_glow
+                else:
+                    bar_color = self.text_dim
+                
+                self.canvas.create_rectangle(
+                    bar_x, bar_y + 25 - bar_height,
+                    bar_x + 8, bar_y + 25,
+                    fill=bar_color, outline=''
+                )
+            
+            # Last activity text
+            if self.ai_scanner['last_activity']:
+                self.canvas.create_text(
+                    scanner_x + 10, scanner_y + scanner_height - 10,
+                    text=f"» {self.ai_scanner['last_activity'][:22]}",
+                    font=('Consolas', 6),
+                    fill=self.text_dim,
+                    anchor='w'
+                )
         
         # === OVERLAY: PARTICLE EFFECTS (TOP LAYER) ===
         for particle in self.particles:
@@ -2824,11 +3132,11 @@ class Dashboard:
         segment_info = [
             {'type': 'history', 'angle': 180, 'icon': '📜', 'label': 'HISTORY', 'color': self.accent_gold},
             {'type': 'commands', 'angle': 0, 'icon': '⚡', 'label': 'COMMANDS', 'color': self.accent_orange},
-            {'type': 'qa', 'angle': 270, 'icon': '💬', 'label': 'Q&A', 'color': self.tertiary_glow}
+            {'type': 'qa', 'angle': 90, 'icon': '💬', 'label': 'Q&A', 'color': self.tertiary_glow}
         ]
         
-        button_radius = circle_radius + 15
-        button_size = 35
+        button_radius = circle_radius - 40
+        button_size = 30
         
         for segment in segment_info:
             angle_rad = math.radians(segment['angle'])
@@ -3038,6 +3346,25 @@ class Dashboard:
         # Store button region
         self.popout_regions.append(('add_command', add_btn_x, add_btn_y, add_btn_x + 50, add_btn_y + 20))
         
+        # Search bar
+        search_y = y + 38
+        search_filter = self.search_filters.get('commands', '')
+        self.canvas.create_rectangle(
+            x + 15, search_y, x + width - 15, search_y + 22,
+            fill='#0a1414', outline=self.secondary_glow, width=1
+        )
+        search_text = search_filter if search_filter else "🔍 Type to search..."
+        search_color = self.text_color if search_filter else self.text_dim
+        self.canvas.create_text(
+            x + 20, search_y + 11,
+            text=search_text,
+            font=('Consolas', 8),
+            fill=search_color,
+            anchor='w'
+        )
+        # Store search box region for click handling
+        self.popout_regions.append(('search_commands', x + 15, search_y, x + width - 15, search_y + 22))
+        
         # Load actual commands
         commands = []
         try:
@@ -3053,10 +3380,22 @@ class Dashboard:
         except Exception as e:
             self.logger.error(f"Error loading commands: {e}")
         
+        # Apply search filter
+        search_filter = self.search_filters.get('commands', '').lower()
+        if search_filter:
+            filtered = []
+            for trigger, cmd_data in commands:
+                if (search_filter in trigger.lower() or 
+                    search_filter in cmd_data.get('name', '').lower() or
+                    search_filter in cmd_data.get('description', '').lower()):
+                    filtered.append((trigger, cmd_data))
+            commands = filtered
+        
         if not commands:
+            msg = "No matching commands" if search_filter else "No custom commands\nClick + ADD to create"
             self.canvas.create_text(
-                x + width // 2, y + height // 2,
-                text="No custom commands\nClick + ADD to create",
+                x + width // 2, y + height // 2 + 20,
+                text=msg,
                 font=('Consolas', 9),
                 fill=self.text_dim,
                 justify='center'
@@ -3065,7 +3404,7 @@ class Dashboard:
         
         # Scrollable command list
         scroll_offset = self.scroll_offset.get('commands', 0)
-        start_y = y + 50
+        start_y = y + 68
         item_height = 55
         visible_items = (height - 70) // item_height
         
@@ -3162,6 +3501,25 @@ class Dashboard:
         # Store button region
         self.popout_regions.append(('add_qa', add_btn_x, add_btn_y, add_btn_x + 50, add_btn_y + 20))
         
+        # Search bar
+        search_y = y + 38
+        search_filter = self.search_filters.get('qa', '')
+        self.canvas.create_rectangle(
+            x + 15, search_y, x + width - 15, search_y + 22,
+            fill='#0a1414', outline=self.secondary_glow, width=1
+        )
+        search_text = search_filter if search_filter else "🔍 Type to search..."
+        search_color = self.text_color if search_filter else self.text_dim
+        self.canvas.create_text(
+            x + 20, search_y + 11,
+            text=search_text,
+            font=('Consolas', 8),
+            fill=search_color,
+            anchor='w'
+        )
+        # Store search box region for click handling
+        self.popout_regions.append(('search_qa', x + 15, search_y, x + width - 15, search_y + 22))
+        
         # Load actual Q&A pairs
         qa_pairs = []
         try:
@@ -3178,10 +3536,20 @@ class Dashboard:
         except Exception as e:
             self.logger.error(f"Error loading Q&A: {e}")
         
+        # Apply search filter
+        search_filter = self.search_filters.get('qa', '').lower()
+        if search_filter:
+            filtered = []
+            for question, answer in qa_pairs:
+                if search_filter in question.lower() or search_filter in answer.lower():
+                    filtered.append((question, answer))
+            qa_pairs = filtered
+        
         if not qa_pairs:
+            msg = "No matching Q&A pairs" if search_filter else "No Q&A pairs\nClick + ADD to create"
             self.canvas.create_text(
-                x + width // 2, y + height // 2,
-                text="No Q&A pairs\nClick + ADD to create",
+                x + width // 2, y + height // 2 + 20,
+                text=msg,
                 font=('Consolas', 9),
                 fill=self.text_dim,
                 justify='center'
@@ -3190,7 +3558,7 @@ class Dashboard:
         
         # Scrollable Q&A list
         scroll_offset = self.scroll_offset.get('qa', 0)
-        start_y = y + 50
+        start_y = y + 68
         item_height = 70
         visible_items = (height - 70) // item_height
         
@@ -3382,6 +3750,7 @@ class Dashboard:
             ("Q&A EDITOR", self._open_qa_editor, self.accent_gold),
             ("TOGGLE MIC MODE", self._toggle_open_mic, self.primary_glow),
             ("HISTORY LOG", self._show_history, self.text_color),
+            ("INTERNAL REASONING", self.show_internal_reasoning, '#00ccff'),
             ("EXIT JARVIS", self._exit_app, '#ff0000')
         ]
         
@@ -3619,6 +3988,23 @@ class Dashboard:
         if self.scan_line_y > self.height:
             self.scan_line_y = 0
         
+        # Update AI Scanner animation (NEW v1.0.4)
+        import random
+        self.ai_scanner['scan_angle'] = (self.ai_scanner['scan_angle'] + 8) % 360
+        if self.current_state in ['processing', 'thinking']:
+            self.ai_scanner['active'] = True
+            # Animate activity bars
+            for i in range(8):
+                target = random.uniform(0.5, 1.0)
+                self.ai_scanner['activity_bars'][i] += (target - self.ai_scanner['activity_bars'][i]) * 0.3
+        else:
+            # Decay activity bars when idle
+            for i in range(8):
+                self.ai_scanner['activity_bars'][i] = max(0, self.ai_scanner['activity_bars'][i] - 0.05)
+        
+        # Update 3D Globe rotation (NEW v1.0.6)
+        self.globe['rotation'] = (self.globe['rotation'] + 0.5) % 360
+        
         # Update floating elements
         for elem in self.floating_elements:
             elem['angle'] += 0.3
@@ -3783,6 +4169,103 @@ class Dashboard:
         )
         close_btn.pack(fill=tk.X, padx=20, pady=(0, 20))
     
+    def _prompt_search(self, panel_type):
+        """Prompt user to enter search text for commands or Q&A."""
+        # Create simple input dialog
+        search_window = tk.Toplevel(self.root)
+        search_window.title(f"Search {panel_type.upper()}")
+        search_window.configure(bg='#0a0e1a')
+        search_window.attributes('-topmost', True)
+        
+        # Set size and center on screen
+        window_width = 400
+        window_height = 150
+        screen_width = search_window.winfo_screenwidth()
+        screen_height = search_window.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        search_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # Title
+        title = tk.Label(
+            search_window,
+            text=f"🔍 SEARCH {panel_type.upper()}",
+            font=("Consolas", 12, "bold"),
+            bg='#0a0e1a',
+            fg=self.text_color
+        )
+        title.pack(pady=10)
+        
+        # Search entry
+        entry_frame = tk.Frame(search_window, bg=self.secondary_glow, bd=2)
+        entry_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        search_entry = tk.Entry(
+            entry_frame,
+            font=("Consolas", 11),
+            bg='#1a1f2e',
+            fg='#e0e6ed',
+            insertbackground=self.text_color,
+            bd=0
+        )
+        search_entry.pack(fill=tk.X, padx=5, pady=5)
+        search_entry.insert(0, self.search_filters.get(panel_type, ''))
+        search_entry.focus_set()
+        search_entry.select_range(0, tk.END)
+        
+        def apply_search():
+            """Apply the search filter."""
+            search_text = search_entry.get().strip()
+            self.search_filters[panel_type] = search_text
+            self.scroll_offset[panel_type] = 0  # Reset scroll
+            self._draw_hud()
+            search_window.destroy()
+        
+        def clear_search():
+            """Clear the search filter."""
+            self.search_filters[panel_type] = ''
+            self.scroll_offset[panel_type] = 0  # Reset scroll
+            self._draw_hud()
+            search_window.destroy()
+        
+        # Buttons
+        button_frame = tk.Frame(search_window, bg='#0a0e1a')
+        button_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        search_btn = tk.Button(
+            button_frame,
+            text="🔍 SEARCH",
+            font=("Consolas", 10, "bold"),
+            bg=self.secondary_glow,
+            fg='#ffffff',
+            activebackground=self.primary_glow,
+            relief=tk.FLAT,
+            bd=0,
+            pady=8,
+            command=apply_search,
+            cursor="hand2"
+        )
+        search_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
+        clear_btn = tk.Button(
+            button_frame,
+            text="✖ CLEAR",
+            font=("Consolas", 10),
+            bg='#1a1f2e',
+            fg='#e0e6ed',
+            activebackground='#333333',
+            relief=tk.FLAT,
+            bd=0,
+            pady=8,
+            command=clear_search,
+            cursor="hand2"
+        )
+        clear_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
+        
+        # Bind Enter key to search
+        search_entry.bind('<Return>', lambda e: apply_search())
+        search_entry.bind('<Escape>', lambda e: search_window.destroy())
+    
     def _open_commands_editor(self):
         """Open custom commands editor dialog."""
         settings_window = tk.Toplevel(self.root)
@@ -3811,6 +4294,29 @@ class Dashboard:
         )
         instructions.pack(pady=5)
         
+        # Search bar
+        search_frame = tk.Frame(settings_window, bg='#0a0e1a')
+        search_frame.pack(fill=tk.X, padx=20, pady=(5, 0))
+        
+        tk.Label(
+            search_frame,
+            text="🔍 Search:",
+            font=("Consolas", 9),
+            bg='#0a0e1a',
+            fg=self.text_color
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        
+        search_entry = tk.Entry(
+            search_frame,
+            font=("Consolas", 10),
+            bg='#1a1f2e',
+            fg='#e0e6ed',
+            insertbackground=self.text_color,
+            bd=1,
+            relief=tk.SOLID
+        )
+        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        
         # Text editor
         editor_frame = tk.Frame(settings_window, bg=self.secondary_glow, bd=2)
         editor_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
@@ -3827,6 +4333,30 @@ class Dashboard:
             pady=10
         )
         text_editor.pack(fill=tk.BOTH, expand=True)
+        
+        # Search functionality
+        def search_text(event=None):
+            search_term = search_entry.get()
+            text_editor.tag_remove('found', '1.0', tk.END)
+            
+            if search_term:
+                idx = '1.0'
+                while True:
+                    idx = text_editor.search(search_term, idx, nocase=True, stopindex=tk.END)
+                    if not idx:
+                        break
+                    lastidx = f"{idx}+{len(search_term)}c"
+                    text_editor.tag_add('found', idx, lastidx)
+                    idx = lastidx
+                
+                # Configure highlight tag
+                text_editor.tag_config('found', background='#ffdd00', foreground='#000000')
+                
+                # Scroll to first match
+                if text_editor.tag_ranges('found'):
+                    text_editor.see(text_editor.tag_ranges('found')[0])
+        
+        search_entry.bind('<KeyRelease>', search_text)
         
         # Load current config
         try:
@@ -3918,6 +4448,29 @@ class Dashboard:
         )
         instructions.pack(pady=5)
         
+        # Search bar
+        search_frame = tk.Frame(qa_window, bg='#0a0e1a')
+        search_frame.pack(fill=tk.X, padx=20, pady=(5, 0))
+        
+        tk.Label(
+            search_frame,
+            text="🔍 Search:",
+            font=("Consolas", 9),
+            bg='#0a0e1a',
+            fg=self.text_color
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        
+        qa_search_entry = tk.Entry(
+            search_frame,
+            font=("Consolas", 10),
+            bg='#1a1f2e',
+            fg='#e0e6ed',
+            insertbackground=self.text_color,
+            bd=1,
+            relief=tk.SOLID
+        )
+        qa_search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        
         # Text editor
         editor_frame = tk.Frame(qa_window, bg=self.secondary_glow, bd=2)
         editor_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
@@ -3934,6 +4487,30 @@ class Dashboard:
             pady=10
         )
         text_editor.pack(fill=tk.BOTH, expand=True)
+        
+        # Search functionality
+        def search_qa_text(event=None):
+            search_term = qa_search_entry.get()
+            text_editor.tag_remove('found', '1.0', tk.END)
+            
+            if search_term:
+                idx = '1.0'
+                while True:
+                    idx = text_editor.search(search_term, idx, nocase=True, stopindex=tk.END)
+                    if not idx:
+                        break
+                    lastidx = f"{idx}+{len(search_term)}c"
+                    text_editor.tag_add('found', idx, lastidx)
+                    idx = lastidx
+                
+                # Configure highlight tag
+                text_editor.tag_config('found', background='#ffdd00', foreground='#000000')
+                
+                # Scroll to first match
+                if text_editor.tag_ranges('found'):
+                    text_editor.see(text_editor.tag_ranges('found')[0])
+        
+        qa_search_entry.bind('<KeyRelease>', search_qa_text)
         
         # Load current Q&A database
         try:
@@ -4126,6 +4703,11 @@ class Dashboard:
                     self.logger.info(f"You: {text}")
                     self.set_state("thinking")
                     
+                    # Update AI Scanner (NEW v1.0.4)
+                    self.ai_scanner['status'] = f"Analyzing: {text[:15]}"
+                    self.ai_scanner['last_activity'] = text
+                    self.ai_scanner['active'] = True
+                    
                     # Add to command history
                     self.add_to_history(text)
                     
@@ -4134,6 +4716,9 @@ class Dashboard:
                         
                         self.logger.info(f"Jarvis: {response}")
                         self.set_state("speaking")
+                        
+                        # Update scanner with completion
+                        self.ai_scanner['status'] = "Responding..."
                         
                         # Add notification for command execution
                         self.add_notification(f"Executed: {text[:30]}", 'info')
@@ -4205,6 +4790,9 @@ class Dashboard:
         self.check_updates_on_startup = True
         self.auto_download_updates = False
         self.github_repo = "astroverse4223-lab/JarvisOmega"
+        self.ui_opacity = 100
+        self.tts_voice_speed = 175
+        self.tts_voice_name = None
         
         try:
             if os.path.exists(self.settings_file):
@@ -4215,6 +4803,12 @@ class Dashboard:
                     self.check_updates_on_startup = settings.get('check_updates_on_startup', True)
                     self.auto_download_updates = settings.get('auto_download_updates', False)
                     self.github_repo = settings.get('github_repo', 'astroverse4223-lab/JarvisOmega')
+                    self.ui_opacity = settings.get('ui_opacity', 100)
+                    self.tts_voice_speed = settings.get('tts_voice_speed', 175)
+                    self.tts_voice_name = settings.get('tts_voice_name', None)
+                    saved_theme = settings.get('current_theme', 'holographic_teal')
+                    if saved_theme in self.themes:
+                        self.current_theme = saved_theme
                     self.logger.info("Loaded UI settings from file")
         except Exception as e:
             self.logger.warning(f"Failed to load settings: {e}")
@@ -4227,7 +4821,11 @@ class Dashboard:
                 'animation_delay': self.animation_delay,
                 'check_updates_on_startup': self.check_updates_on_startup,
                 'auto_download_updates': self.auto_download_updates,
-                'github_repo': self.github_repo
+                'github_repo': self.github_repo,
+                'ui_opacity': getattr(self, 'ui_opacity', 100),
+                'tts_voice_speed': getattr(self, 'tts_voice_speed', 175),
+                'tts_voice_name': getattr(self, 'tts_voice_name', None),
+                'current_theme': getattr(self, 'current_theme', 'holographic_teal')
             }
             with open(self.settings_file, 'w') as f:
                 json.dump(settings, f, indent=4)
@@ -4235,17 +4833,55 @@ class Dashboard:
         except Exception as e:
             self.logger.error(f"Failed to save settings: {e}")
     
-    def _check_for_updates_async(self):
+    def _apply_saved_voice(self):
+        """Apply saved TTS voice and speed on startup."""
+        try:
+            saved_voice_name = getattr(self, 'tts_voice_name', None)
+            saved_speed = getattr(self, 'tts_voice_speed', 175)
+            
+            if not saved_voice_name:
+                return
+            
+            # Apply voice
+            if hasattr(self.jarvis.tts, 'use_pyttsx3') and self.jarvis.tts.use_pyttsx3:
+                voices = self.jarvis.tts.speaker.getProperty('voices')
+                for voice in voices:
+                    if voice.name == saved_voice_name:
+                        self.jarvis.tts.speaker.setProperty('voice', voice.id)
+                        self.logger.info(f"Restored voice: {saved_voice_name}")
+                        break
+            else:
+                # Windows SAPI
+                voices = self.jarvis.tts.speaker.GetVoices()
+                for i in range(voices.Count):
+                    voice = voices.Item(i)
+                    if voice.GetDescription() == saved_voice_name:
+                        self.jarvis.tts.speaker.Voice = voice
+                        self.logger.info(f"Restored voice: {saved_voice_name}")
+                        break
+            
+            # Apply speed
+            if hasattr(self.jarvis.tts, 'use_pyttsx3') and self.jarvis.tts.use_pyttsx3:
+                self.jarvis.tts.speaker.setProperty('rate', saved_speed)
+            else:
+                sapi_rate = int((saved_speed - 175) / 25)
+                self.jarvis.tts.speaker.Rate = max(-10, min(10, sapi_rate))
+            
+            self.logger.info(f"Restored voice speed: {saved_speed}")
+        except Exception as e:
+            self.logger.warning(f"Failed to apply saved voice: {e}")
+    
+    def _check_for_updates_async(self, manual_check=False):
         """Check for updates in background thread."""
         def check_thread():
             try:
-                self._check_for_updates()
+                self._check_for_updates(manual_check=manual_check)
             except Exception as e:
                 self.logger.error(f"Update check failed: {e}")
         
         threading.Thread(target=check_thread, daemon=True).start()
     
-    def _check_for_updates(self):
+    def _check_for_updates(self, manual_check=False):
         """Check GitHub releases for new version."""
         try:
             # Read local version
@@ -4266,8 +4902,9 @@ class Dashboard:
             
             if response.status_code == 404:
                 self.logger.warning("GitHub repository not found or no releases available")
-                self._show_update_message("No Updates", 
-                    f"Unable to check for updates.\\n\\nMake sure to set your GitHub repo in:\\nself.github_repo = '{self.github_repo}'")
+                if manual_check:
+                    self._show_update_message("No Updates", 
+                        f"Unable to check for updates.\\n\\nMake sure to set your GitHub repo in:\\nself.github_repo = '{self.github_repo}'")
                 return
             
             response.raise_for_status()
@@ -4280,21 +4917,36 @@ class Dashboard:
             
             self.logger.info(f"Latest version: {latest_version}")
             
+            # Validate version format
+            if not latest_version or latest_version == '':
+                self.logger.warning("No version tag found in latest release")
+                if manual_check:
+                    self._show_update_message("Check Failed", "No valid version tag found in latest release.")
+                return
+            
             # Compare versions
             if self._is_newer_version(latest_version, local_version):
                 self.logger.info(f"New version available: {latest_version}")
                 self._show_update_dialog(latest_version, local_version, release_url, release_notes)
             else:
-                self.logger.info("Already on latest version")
-                self._show_update_message("Up to Date", 
-                    f"You're running the latest version!\\n\\nCurrent: v{local_version}\\nLatest: v{latest_version}")
+                self.logger.info(f"Already on latest version (local: {local_version}, remote: {latest_version})")
+                # Show "up to date" message when manually checking
+                if manual_check:
+                    self._show_update_message("Up to Date", 
+                        f"You're running the latest version!\\n\\nCurrent: v{local_version}\\nLatest: v{latest_version}")
         
         except requests.exceptions.Timeout:
             self.logger.error("Update check timed out")
+            if manual_check:
+                self._show_update_message("Check Failed", "Update check timed out.\n\nPlease check your internet connection and try again.")
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Update check network error: {e}")
+            if manual_check:
+                self._show_update_message("Check Failed", f"Network error occurred.\n\n{str(e)}")
         except Exception as e:
             self.logger.error(f"Update check failed: {e}")
+            if manual_check:
+                self._show_update_message("Check Failed", f"Update check failed.\n\n{str(e)}")
     
     def _is_newer_version(self, latest, current):
         """Compare version strings (semantic versioning)."""
@@ -4360,11 +5012,11 @@ class Dashboard:
             
             assets = release_data.get('assets', [])
             
-            # Find the main executable or installer
+            # Find the main executable, installer, or ZIP
             download_asset = None
             for asset in assets:
                 name = asset['name'].lower()
-                if name.endswith('.exe') or name.endswith('.msi') or 'installer' in name:
+                if name.endswith('.zip') or name.endswith('.exe') or name.endswith('.msi') or 'installer' in name:
                     download_asset = asset
                     break
             
@@ -4379,6 +5031,7 @@ class Dashboard:
             # Download the update
             download_url = download_asset['browser_download_url']
             file_name = download_asset['name']
+            is_zip = file_name.lower().endswith('.zip')
             
             self.logger.info(f"Downloading update: {file_name}")
             messagebox.showinfo("Downloading Update", 
@@ -4405,23 +5058,63 @@ class Dashboard:
             
             self.logger.info(f"Downloaded to: {download_path}")
             
-            # Ask user to install
-            result = messagebox.askyesno("Update Downloaded", 
-                f"JARVIS v{version} has been downloaded!\n\n"
-                f"Location: {download_path}\n\n"
-                f"Would you like to run the installer now?\n"
-                f"(JARVIS will close)")
-            
-            if result:
-                # Run the installer and close JARVIS
-                import subprocess
-                subprocess.Popen([download_path], shell=True)
-                self.logger.info("Launching installer and closing JARVIS")
-                self.root.quit()
+            # Handle ZIP vs installer differently
+            if is_zip:
+                # For ZIP files, extract and show instructions
+                import zipfile
+                extract_dir = os.path.join(temp_dir, f"Jarvis_v{version}")
+                
+                self.logger.info(f"Extracting ZIP to: {extract_dir}")
+                
+                with zipfile.ZipFile(download_path, 'r') as zip_ref:
+                    zip_ref.extractall(extract_dir)
+                
+                # Find the Jarvis.exe in extracted folder
+                jarvis_exe = None
+                for root, dirs, files in os.walk(extract_dir):
+                    if 'Jarvis.exe' in files:
+                        jarvis_exe = os.path.join(root, 'Jarvis.exe')
+                        break
+                
+                if jarvis_exe:
+                    result = messagebox.askyesno("Update Ready", 
+                        f"JARVIS v{version} has been extracted!\n\n"
+                        f"Location: {extract_dir}\n\n"
+                        f"Launch the new version now?\n"
+                        f"(Current JARVIS will close)")
+                    
+                    if result:
+                        # Launch new version and close current
+                        import subprocess
+                        subprocess.Popen([jarvis_exe], shell=True)
+                        self.logger.info("Launching new version and closing current JARVIS")
+                        self.root.quit()
+                    else:
+                        messagebox.showinfo("Update Ready", 
+                            f"The new version has been extracted to:\n{extract_dir}\n\n"
+                            f"Run Jarvis.exe when you're ready to update.")
+                else:
+                    messagebox.showwarning("Update Extracted", 
+                        f"Update extracted to:\n{extract_dir}\n\n"
+                        f"Please manually run Jarvis.exe from that folder.")
             else:
-                messagebox.showinfo("Update Ready", 
-                    f"The installer has been saved to:\n{download_path}\n\n"
-                    f"Run it when you're ready to update.")
+                # For installer files (.exe/.msi)
+                result = messagebox.askyesno("Update Downloaded", 
+                    f"JARVIS v{version} has been downloaded!\n\n"
+                    f"Location: {download_path}\n\n"
+                    f"Would you like to run the installer now?\n"
+                    f"(JARVIS will close)")
+                
+                if result:
+                    # Run the installer and close JARVIS
+                    import subprocess
+                    subprocess.Popen([download_path], shell=True)
+                    self.logger.info("Launching installer and closing JARVIS")
+                    self.root.quit()
+                else:
+                    messagebox.showinfo("Update Ready", 
+                        f"The installer has been saved to:\n{download_path}\n\n"
+                        f"Run it when you're ready to update.")
         
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Download failed: {e}")
@@ -4433,3 +5126,269 @@ class Dashboard:
             messagebox.showerror("Update Failed", 
                 f"Failed to install update: {e}\n\nPlease download manually from:\n{release_url}")
             webbrowser.open(release_url)
+    
+    def update_internal_reasoning(self, debate_result: dict):
+        """
+        Display multi-agent internal reasoning in UI.
+        Stores the latest debate result for display in history or logs.
+        
+        Args:
+            debate_result: Dictionary from MultiAgentDebate.debate()
+        """
+        if not debate_result or not debate_result.get('enabled'):
+            return
+        
+        # Store for potential history viewing
+        if not hasattr(self, '_recent_debates'):
+            self._recent_debates = []
+        
+        self._recent_debates.append(debate_result)
+        
+        # Keep only last 10 debates
+        if len(self._recent_debates) > 10:
+            self._recent_debates.pop(0)
+        
+        # Log the reasoning (for debugging/analysis)
+        self.logger.debug("=== INTERNAL MULTI-AGENT REASONING ===")
+        if debate_result.get('analyst_response'):
+            self.logger.debug(f"📊 ANALYST: {debate_result['analyst_response'][:100]}...")
+        if debate_result.get('skeptic_response'):
+            self.logger.debug(f"⚠️ SKEPTIC: {debate_result['skeptic_response'][:100]}...")
+        if debate_result.get('architect_response'):
+            self.logger.debug(f"🏗️ ARCHITECT: {debate_result['architect_response'][:100]}...")
+    
+    def show_internal_reasoning(self):
+        """
+        Show internal reasoning window with recent multi-agent debates.
+        Displays the thought process of agents with color-coded confidence levels.
+        """
+        if not hasattr(self, '_recent_debates') or not self._recent_debates:
+            messagebox.showinfo("Internal Reasoning", 
+                "No internal debates recorded yet.\\n\\n"
+                "Multi-agent reasoning will appear here after processing requests.")
+            return
+        
+        # Create reasoning window
+        reasoning_window = tk.Toplevel(self.root)
+        reasoning_window.title("Internal Multi-Agent Reasoning")
+        reasoning_window.geometry("950x750")
+        reasoning_window.configure(bg='#0a0e1a')
+        
+        # Title with confidence legend
+        title_frame = tk.Frame(reasoning_window, bg='#0a0e1a')
+        title_frame.pack(pady=10, fill=tk.X)
+        
+        title = tk.Label(
+            title_frame,
+            text="🧠 INTERNAL MULTI-AGENT REASONING",
+            font=("Consolas", 14, "bold"),
+            bg='#0a0e1a',
+            fg=self.text_color
+        )
+        title.pack()
+        
+        # Confidence legend
+        legend = tk.Label(
+            title_frame,
+            text="Confidence: 🟢 High (>0.8)  🟡 Medium (0.6-0.8)  🔴 Low (<0.6)",
+            font=("Consolas", 8),
+            bg='#0a0e1a',
+            fg='#888888'
+        )
+        legend.pack(pady=5)
+        
+        # Scrollable frame
+        canvas = tk.Canvas(reasoning_window, bg='#0a0e1a', highlightthickness=0)
+        scrollbar = tk.Scrollbar(reasoning_window, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='#0a0e1a')
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Display recent debates (most recent first)
+        for i, debate in enumerate(reversed(self._recent_debates)):
+            debate_frame = tk.Frame(scrollable_frame, bg='#1a1f2e', relief=tk.RAISED, borderwidth=2)
+            debate_frame.pack(fill=tk.X, padx=10, pady=5)
+            
+            # User input header
+            user_input = debate.get('user_input', 'Unknown')
+            overall_conf = debate.get('overall_confidence', 0.7)
+            conf_emoji = self._get_confidence_emoji(overall_conf)
+            conf_color = self._get_confidence_color(overall_conf)
+            
+            header = tk.Label(
+                debate_frame,
+                text=f"💬 Request: {user_input}",
+                font=("Consolas", 10, "bold"),
+                bg='#1a1f2e',
+                fg='#00ffcc',
+                anchor='w',
+                justify='left'
+            )
+            header.pack(fill=tk.X, padx=10, pady=5)
+            
+            # Overall confidence indicator
+            conf_label = tk.Label(
+                debate_frame,
+                text=f"{conf_emoji} Overall Confidence: {overall_conf:.1%}",
+                font=("Consolas", 9, "bold"),
+                bg='#1a1f2e',
+                fg=conf_color,
+                anchor='w'
+            )
+            conf_label.pack(fill=tk.X, padx=10, pady=(0, 5))
+            
+            # Domain expert if present
+            if debate.get('expert_response'):
+                domain = debate.get('expert_domain', 'unknown')
+                expert_conf = debate.get('expert_confidence', 0.7)
+                expert_emoji = self._get_confidence_emoji(expert_conf)
+                expert_color = self._get_confidence_color(expert_conf)
+                
+                expert_label = tk.Label(
+                    debate_frame,
+                    text=f"🎓 {domain.upper()} EXPERT: {expert_emoji} {expert_conf:.1%}",
+                    font=("Consolas", 9, "bold"),
+                    bg='#1a1f2e',
+                    fg=expert_color,
+                    anchor='w'
+                )
+                expert_label.pack(fill=tk.X, padx=20, pady=(5, 0))
+                
+                expert_text = tk.Text(
+                    debate_frame,
+                    font=("Consolas", 8),
+                    bg='#0f1419',
+                    fg='#a0a0a0',
+                    height=3,
+                    wrap=tk.WORD,
+                    relief=tk.FLAT
+                )
+                expert_text.insert('1.0', debate['expert_response'])
+                expert_text.config(state=tk.DISABLED)
+                expert_text.pack(fill=tk.X, padx=30, pady=2)
+            
+            # Analyst response
+            if debate.get('analyst_response'):
+                analyst_conf = debate.get('analyst_confidence', 0.7)
+                analyst_emoji = self._get_confidence_emoji(analyst_conf)
+                analyst_color = self._get_confidence_color(analyst_conf)
+                
+                analyst_label = tk.Label(
+                    debate_frame,
+                    text=f"📊 ANALYST: {analyst_emoji} {analyst_conf:.1%}",
+                    font=("Consolas", 9, "bold"),
+                    bg='#1a1f2e',
+                    fg='#4da6ff',
+                    anchor='w'
+                )
+                analyst_label.pack(fill=tk.X, padx=20, pady=(5, 0))
+                
+                analyst_text = tk.Text(
+                    debate_frame,
+                    font=("Consolas", 8),
+                    bg='#0f1419',
+                    fg='#a0a0a0',
+                    height=3,
+                    wrap=tk.WORD,
+                    relief=tk.FLAT
+                )
+                analyst_text.insert('1.0', debate['analyst_response'])
+                analyst_text.config(state=tk.DISABLED)
+                analyst_text.pack(fill=tk.X, padx=30, pady=2)
+            
+            # Skeptic response
+            if debate.get('skeptic_response'):
+                skeptic_conf = debate.get('skeptic_confidence', 0.7)
+                skeptic_emoji = self._get_confidence_emoji(skeptic_conf)
+                skeptic_color = self._get_confidence_color(skeptic_conf)
+                
+                skeptic_label = tk.Label(
+                    debate_frame,
+                    text=f"⚠️ SKEPTIC: {skeptic_emoji} {skeptic_conf:.1%}",
+                    font=("Consolas", 9, "bold"),
+                    bg='#1a1f2e',
+                    fg='#ff9900',
+                    anchor='w'
+                )
+                skeptic_label.pack(fill=tk.X, padx=20, pady=(5, 0))
+                
+                skeptic_text = tk.Text(
+                    debate_frame,
+                    font=("Consolas", 8),
+                    bg='#0f1419',
+                    fg='#a0a0a0',
+                    height=3,
+                    wrap=tk.WORD,
+                    relief=tk.FLAT
+                )
+                skeptic_text.insert('1.0', debate['skeptic_response'])
+                skeptic_text.config(state=tk.DISABLED)
+                skeptic_text.pack(fill=tk.X, padx=30, pady=2)
+            
+            # Architect response
+            if debate.get('architect_response'):
+                architect_conf = debate.get('architect_confidence', 0.7)
+                architect_emoji = self._get_confidence_emoji(architect_conf)
+                architect_color = self._get_confidence_color(architect_conf)
+                
+                architect_label = tk.Label(
+                    debate_frame,
+                    text=f"🏗️ ARCHITECT: {architect_emoji} {architect_conf:.1%}",
+                    font=("Consolas", 9, "bold"),
+                    bg='#1a1f2e',
+                    fg='#00cc66',
+                    anchor='w'
+                )
+                architect_label.pack(fill=tk.X, padx=20, pady=(5, 0))
+                
+                architect_text = tk.Text(
+                    debate_frame,
+                    font=("Consolas", 8),
+                    bg='#0f1419',
+                    fg='#a0a0a0',
+                    height=3,
+                    wrap=tk.WORD,
+                    relief=tk.FLAT
+                )
+                architect_text.insert('1.0', debate['architect_response'])
+                architect_text.config(state=tk.DISABLED)
+                architect_text.pack(fill=tk.X, padx=30, pady=2)
+            
+            # Timestamp
+            if debate.get('duration_seconds'):
+                duration_label = tk.Label(
+                    debate_frame,
+                    text=f"⏱️ Duration: {debate['duration_seconds']:.2f}s",
+                    font=("Consolas", 8),
+                    bg='#1a1f2e',
+                    fg='#666666',
+                    anchor='e'
+                )
+                duration_label.pack(fill=tk.X, padx=20, pady=(0, 5))
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+    
+    def _get_confidence_emoji(self, confidence: float) -> str:
+        """Get emoji for confidence level."""
+        if confidence >= 0.8:
+            return "🟢"
+        elif confidence >= 0.6:
+            return "🟡"
+        else:
+            return "🔴"
+    
+    def _get_confidence_color(self, confidence: float) -> str:
+        """Get color for confidence level."""
+        if confidence >= 0.8:
+            return "#00ff00"  # Green
+        elif confidence >= 0.6:
+            return "#ffdd00"  # Yellow
+        else:
+            return "#ff4444"  # Red

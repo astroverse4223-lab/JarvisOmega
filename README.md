@@ -81,6 +81,12 @@ Edit `config.yaml` to customize:
 - Local LLM via Ollama
 - Intent classification (conversation vs command)
 - Context-aware responses
+- **NEW v1.0.9**: Multi-agent internal reasoning
+  - Three AI agents (Analyst, Skeptic, Architect) debate before decisions
+  - Enhanced safety and transparency
+  - Full audit trail in database
+  - View debates in UI: Menu → "INTERNAL REASONING"
+  - See [MULTI_AGENT_GUIDE.md](MULTI_AGENT_GUIDE.md) for details
 
 ### 🛠️ Skills System
 Modular command architecture:

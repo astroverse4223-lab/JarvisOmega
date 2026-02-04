@@ -98,6 +98,7 @@ def build_executable():
         f'--add-data={project_dir / "config.yaml"}{os.pathsep}.',
         f'--add-data={project_dir / "custom_commands.yaml"}{os.pathsep}.',
         f'--add-data={project_dir / "custom_qa.yaml"}{os.pathsep}.',
+        f'--add-data={project_dir / "VERSION"}{os.pathsep}.',  # Include version file
         f'--add-data={project_dir / "scripts"}{os.pathsep}scripts',  # Include Python scripts folder
         
         # Hidden imports (dependencies not auto-detected)
